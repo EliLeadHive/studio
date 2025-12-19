@@ -1,7 +1,6 @@
 // src/lib/mock-data.ts
 import { subDays, format } from 'date-fns';
 import { AdData, BRANDS, Brand } from './types';
-import { getSynchronizedAdsData } from './actions';
 
 const brandInvestmentRanges: Record<Brand, { min: number, max: number, leadCostFactor: number }> = {
   "Fiat": { min: 200, max: 700, leadCostFactor: 10 },
@@ -44,17 +43,8 @@ const generateData = (): AdData[] => {
 
 const mockData = generateData();
 
-export async function getAdsData({ brand, from, to }: { brand?: Brand; from?: Date; to?: Date } = {}) {
-  // First, try to get real data (from Google Sheet or upload)
-  const realData = await getSynchronizedAdsData({ brand, from, to });
-  if (realData.length > 0) {
-    return realData;
-  }
-  
-  // If no real data is available, fall back to mock data
-  console.warn("Nenhuma fonte de dados real (Google Sheet ou Upload) foi encontrada. Usando dados de exemplo.");
-  await new Promise(resolve => setTimeout(resolve, 500));
-
+// This function now returns mock data synchronously and is renamed to avoid confusion.
+export function getMockData({ brand, from, to }: { brand?: Brand; from?: Date; to?: Date } = {}): AdData[] {
   let filteredData = mockData;
 
   if (brand) {
@@ -64,4 +54,14 @@ export async function getAdsData({ brand, from, to }: { brand?: Brand; from?: Da
   // Note: Date range filtering is not yet implemented for mock data.
 
   return filteredData;
+}
+
+
+// The main data fetching function is now in actions.ts to avoid circular dependency.
+// We keep this one for backwards compatibility where it might be used.
+export async function getAdsData({ brand, from, to }: { brand?: Brand; from?: Date; to?: Date } = {}) {
+  // This function now just returns mock data to keep components working that might still use it.
+  // The logic has been moved to getSynchronizedAdsData in actions.ts
+  const { getSynchronizedAdsData } = await import('./actions');
+  return getSynchronizedAdsData({ brand, from, to });
 }

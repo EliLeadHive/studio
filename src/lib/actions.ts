@@ -5,6 +5,7 @@ import { summarizeAdsInsights } from "@/ai/flows/summarize-ads-insights";
 import type { AdData, Brand } from "./types";
 import { BRANDS } from "./types";
 import Papa from 'papaparse';
+import { getMockData } from "./mock-data";
 
 // This is a temporary in-memory store.
 // In a real application, you would use a database or a more persistent cache.
@@ -159,13 +160,13 @@ async function fetchAndParseSheetData(): Promise<AdData[]> {
 
 export async function getSynchronizedAdsData({ brand, from, to }: { brand?: Brand; from?: Date; to?: Date } = {}) {
   // 1. Prioritize data from Google Sheet if URL is available.
-  if(GOOGLE_SHEET_CSV_URL) {
+  if (GOOGLE_SHEET_CSV_URL) {
     const sheetData = await fetchAndParseSheetData();
-    if(sheetData.length > 0) {
-        adDataStore = sheetData;
+    if (sheetData.length > 0) {
+      adDataStore = sheetData;
     }
   }
-  
+
   // 2. Use in-memory data (from upload or from sheet cache) if available.
   if (adDataStore.length > 0) {
     let filteredData = adDataStore;
@@ -177,5 +178,6 @@ export async function getSynchronizedAdsData({ brand, from, to }: { brand?: Bran
   }
 
   // 3. Fallback to mock data if nothing else is available.
-  return []; // Returning empty array to avoid using mock data now.
+  console.warn("Nenhuma fonte de dados real (Google Sheet ou Upload) foi encontrada. Usando dados de exemplo.");
+  return getMockData({ brand, from, to });
 }
