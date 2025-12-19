@@ -11,7 +11,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Car, MapPin, PieChart } from 'lucide-react';
+import { Car, MapPin, PieChart, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BRANDS } from '@/lib/types';
@@ -24,6 +24,7 @@ export function Sidebar() {
   const [lastSync, setLastSync] = useState('Aguardando...');
 
   useEffect(() => {
+    // In a real app, this would come from the data source
     setLastSync(format(new Date(), "dd/MM/yy 'às' HH:mm", { locale: ptBR }));
   }, [pathname]);
 
@@ -55,6 +56,14 @@ export function Sidebar() {
                 <Link href="/dashboard">
                   <PieChart />
                   <span>Dashboard Executivo</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname === '/dashboard/upload'} tooltip="Upload de Dados">
+                <Link href="/dashboard/upload">
+                  <Upload />
+                  <span>Upload de Dados</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -95,8 +104,8 @@ export function Sidebar() {
                 CSV
             </div>
             <div className="group-data-[collapsible=icon]:hidden">
-                <p className="text-xs font-bold text-foreground">Google Sheets</p>
-                <p className="text-[10px] text-muted-foreground" id="last-sync">{lastSync}</p>
+                <p className="text-xs font-bold text-foreground">Fonte de Dados</p>
+                <p className="text-[10px] text-muted-foreground" id="last-sync">{`Último upload: ${lastSync}`}</p>
             </div>
         </div>
       </SidebarFooter>

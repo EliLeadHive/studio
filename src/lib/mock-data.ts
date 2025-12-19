@@ -1,5 +1,6 @@
 import { subDays, format } from 'date-fns';
 import { AdData, BRANDS, Brand } from './types';
+import { getUploadedAdsData } from './actions';
 
 const brandInvestmentRanges: Record<Brand, { min: number, max: number, leadCostFactor: number }> = {
   "Fiat": { min: 200, max: 700, leadCostFactor: 10 },
@@ -41,13 +42,19 @@ const generateData = (): AdData[] => {
   return data;
 };
 
-const allData = generateData();
+const mockData = generateData();
 
 export async function getAdsData({ brand, from, to }: { brand?: Brand; from?: Date; to?: Date } = {}) {
-  // Simulate network delay
+  // First, try to get real uploaded data.
+  const uploadedData = await getUploadedAdsData({ brand, from, to });
+  if (uploadedData.length > 0) {
+    return uploadedData;
+  }
+  
+  // If no uploaded data, fall back to mock data
   await new Promise(resolve => setTimeout(resolve, 500));
 
-  let filteredData = allData;
+  let filteredData = mockData;
 
   if (brand) {
     filteredData = filteredData.filter(d => d.brand === brand);
