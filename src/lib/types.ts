@@ -1,4 +1,25 @@
-export const BRANDS = ["Fiat", "Jeep", "Ram", "Peugeot", "Citroën", "Nissan"] as const;
+export const BRANDS = [
+  "Fiat", 
+  "Jeep", 
+  "Ram", 
+  "Peugeot", 
+  "Citroën", 
+  "Nissan",
+  "Honda",
+  "Asti",
+  "Ford",
+  "Gac",
+  "Geely",
+  "GS",
+  "Hyundai",
+  "Kia",
+  "Leap",
+  "Neta",
+  "Omoda",
+  "Jaecoo",
+  "PSA",
+  "Renault"
+] as const;
 export type Brand = (typeof BRANDS)[number];
 
 export interface AdData {
@@ -7,7 +28,7 @@ export interface AdData {
   brand: Brand;
   account: string;
   campaignName: string;
-  adSetName: string;
+  adSetName:string;
   adName: string;
   investment: number;
   leads: number;

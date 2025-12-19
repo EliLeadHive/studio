@@ -57,6 +57,16 @@ export async function getAiSummary(
   }
 }
 
+function findBrandInText(text: string): Brand | null {
+  const lowerCaseText = text.toLowerCase();
+  for (const brand of BRANDS) {
+    if (lowerCaseText.includes(brand.toLowerCase())) {
+      return brand;
+    }
+  }
+  return null;
+}
+
 function parseCSV(csvText: string): AdData[] {
     const parseResult = Papa.parse<any>(csvText, { header: true, skipEmptyLines: true });
     const data: AdData[] = [];
@@ -92,7 +102,10 @@ function parseCSV(csvText: string): AdData[] {
 
     for (const [index, row] of parseResult.data.entries()) {
         const campaignName = row[mappedHeaders.campaignName] || '';
-        const brand = BRANDS.find(b => campaignName.toLowerCase().includes(b.toLowerCase()));
+        const adAccountName = row[mappedHeaders.account] || '';
+
+        // Try to find brand in campaign name, then in account name
+        const brand = findBrandInText(campaignName) || findBrandInText(adAccountName);
 
         if (!brand) continue;
 
@@ -144,7 +157,7 @@ export async function uploadAdsData(formData: FormData) {
     const parsedData = parseCSV(fileContent);
 
     if (parsedData.length === 0) {
-        return { success: false, error: 'Nenhum dado válido encontrado no arquivo. Verifique se os nomes das campanhas incluem as marcas e se as colunas estão corretas.' };
+        return { success: false, error: 'Nenhum dado válido encontrado no arquivo. Verifique se os nomes das campanhas ou contas incluem as marcas e se as colunas estão corretas.' };
     }
     
     adDataStore = parsedData;

@@ -18,6 +18,7 @@ import { BRANDS } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { ScrollArea } from '../ui/scroll-area';
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -80,22 +81,24 @@ export function Sidebar() {
         <SidebarSeparator />
         <SidebarGroup>
           <SidebarGroupLabel>Marcas</SidebarGroupLabel>
-          <SidebarMenu>
-            {BRANDS.map((brand) => (
-              <SidebarMenuItem key={brand}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === `/dashboard/${brand.toLowerCase()}`}
-                  tooltip={brand}
-                >
-                  <Link href={`/dashboard/${brand.toLowerCase()}`}>
-                    <Car />
-                    <span>{brand}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
+          <ScrollArea className="h-[calc(100vh-400px)]">
+            <SidebarMenu>
+              {BRANDS.map((brand) => (
+                <SidebarMenuItem key={brand}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === `/dashboard/${brand.toLowerCase()}`}
+                    tooltip={brand}
+                  >
+                    <Link href={`/dashboard/${brand.toLowerCase()}`}>
+                      <Car />
+                      <span>{brand}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </ScrollArea>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="group-data-[collapsible=icon]:p-0">

@@ -9,6 +9,20 @@ const brandInvestmentRanges: Record<Brand, { min: number, max: number, leadCostF
   "Peugeot": { min: 150, max: 600, leadCostFactor: 12, clickCostFactor: 1.8 },
   "Citroën": { min: 120, max: 500, leadCostFactor: 11, clickCostFactor: 1.6 },
   "Nissan": { min: 180, max: 650, leadCostFactor: 15, clickCostFactor: 2 },
+  "Honda": { min: 200, max: 700, leadCostFactor: 18, clickCostFactor: 2.2 },
+  "Asti": { min: 100, max: 400, leadCostFactor: 50, clickCostFactor: 4 },
+  "Ford": { min: 250, max: 800, leadCostFactor: 20, clickCostFactor: 2.5 },
+  "Gac": { min: 150, max: 500, leadCostFactor: 14, clickCostFactor: 1.9 },
+  "Geely": { min: 150, max: 450, leadCostFactor: 13, clickCostFactor: 1.7 },
+  "GS": { min: 50, max: 200, leadCostFactor: 5, clickCostFactor: 0.8 },
+  "Hyundai": { min: 180, max: 680, leadCostFactor: 16, clickCostFactor: 2.1 },
+  "Kia": { min: 170, max: 600, leadCostFactor: 17, clickCostFactor: 2.3 },
+  "Leap": { min: 120, max: 400, leadCostFactor: 12, clickCostFactor: 1.5 },
+  "Neta": { min: 130, max: 420, leadCostFactor: 11, clickCostFactor: 1.4 },
+  "Omoda": { min: 160, max: 550, leadCostFactor: 15, clickCostFactor: 2 },
+  "Jaecoo": { min: 160, max: 550, leadCostFactor: 15, clickCostFactor: 2 },
+  "PSA": { min: 100, max: 300, leadCostFactor: 8, clickCostFactor: 1.2 },
+  "Renault": { min: 150, max: 600, leadCostFactor: 14, clickCostFactor: 1.8 },
 };
 
 const generateData = (): AdData[] => {
@@ -19,7 +33,8 @@ const generateData = (): AdData[] => {
     const date = format(subDays(today, i), 'yyyy-MM-dd');
 
     for (const brand of BRANDS) {
-      const { min, max, leadCostFactor, clickCostFactor } = brandInvestmentRanges[brand];
+      const config = brandInvestmentRanges[brand] || { min: 100, max: 500, leadCostFactor: 15, clickCostFactor: 2 };
+      const { min, max, leadCostFactor, clickCostFactor } = config;
       const investment = Math.random() * (max - min) + min;
       
       const baseLeads = investment / leadCostFactor;
@@ -71,7 +86,7 @@ export function getMockData({ brand, from, to }: { brand?: Brand; from?: Date; t
 }
 
 
-// The main data fetching function is now in actions.ts to avoid circular dependency.
+// The main data fetching function is now in actions.ts
 export async function getAdsData({ brand, from, to }: { brand?: Brand; from?: Date; to?: Date } = {}) {
   const { getSynchronizedAdsData } = await import('./actions');
   return getSynchronizedAdsData({ brand, from, to });
