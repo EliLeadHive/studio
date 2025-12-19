@@ -1,0 +1,60 @@
+import { getAdsData } from '@/lib/mock-data';
+import { AdData } from '@/lib/types';
+import { formatCurrency, formatNumber } from '@/lib/utils';
+import { KpiCard } from '@/components/dashboard/kpi-card';
+import { DollarSign, Target, Users } from 'lucide-react';
+import { BrandPerformanceChart } from '@/components/dashboard/brand-performance-chart';
+
+export default async function DashboardPage() {
+  const data = await getAdsData();
+
+  const totalInvestment = data.reduce((sum, item) => sum + item.investment, 0);
+  const totalLeads = data.reduce((sum, item) => sum + item.leads, 0);
+  const averageCpl = totalInvestment / totalLeads;
+  
+  const brandData = data.reduce((acc, item) => {
+    if (!acc[item.brand]) {
+      acc[item.brand] = { leads: 0 };
+    }
+    acc[item.brand].leads += item.leads;
+    return acc;
+  }, {} as Record<string, { leads: number }>);
+  
+  const chartData = Object.entries(brandData).map(([name, values]) => ({
+    name,
+    Leads: values.leads,
+  }));
+
+  return (
+    <div className="space-y-8 animate-in fade-in-50">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <KpiCard
+          title="Investimento Total"
+          value={formatCurrency(totalInvestment)}
+          description="Soma do investimento em todas as marcas"
+          icon={<DollarSign />}
+          iconBgColorClass="bg-green-500/10"
+          iconColorClass="text-green-400"
+        />
+        <KpiCard
+          title="Leads Totais"
+          value={formatNumber(totalLeads)}
+          description="Soma de leads de todas as marcas"
+          icon={<Users />}
+          iconBgColorClass="bg-blue-500/10"
+          iconColorClass="text-blue-400"
+        />
+        <KpiCard
+          title="CPL Médio"
+          value={formatCurrency(averageCpl)}
+          description="Custo por Lead médio geral"
+          icon={<Target />}
+          iconBgColorClass="bg-orange-500/10"
+          iconColorClass="text-orange-400"
+        />
+      </div>
+
+      <BrandPerformanceChart data={chartData} />
+    </div>
+  );
+}
