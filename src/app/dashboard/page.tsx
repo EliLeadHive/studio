@@ -2,7 +2,7 @@ import { getAdsData } from '@/lib/mock-data';
 import { AdData } from '@/lib/types';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { KpiCard } from '@/components/dashboard/kpi-card';
-import { DollarSign, Target, Users } from 'lucide-react';
+import { DollarSign, Target, Users, MousePointerClick, Eye } from 'lucide-react';
 import { BrandPerformanceChart } from '@/components/dashboard/brand-performance-chart';
 import { ChartContainer, ChartConfig } from '@/components/ui/chart';
 import { BRANDS } from '@/lib/types';
@@ -12,7 +12,9 @@ export default async function DashboardPage() {
 
   const totalInvestment = data.reduce((sum, item) => sum + item.investment, 0);
   const totalLeads = data.reduce((sum, item) => sum + item.leads, 0);
-  const averageCpl = totalInvestment / totalLeads;
+  const totalClicks = data.reduce((sum, item) => sum + item.clicks, 0);
+  const totalImpressions = data.reduce((sum, item) => sum + item.impressions, 0);
+  const averageCpl = totalLeads > 0 ? totalInvestment / totalLeads : 0;
 
   const brandData = data.reduce(
     (acc, item) => {
@@ -44,7 +46,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in-50">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         <KpiCard
           title="Investimento Total"
           value={formatCurrency(totalInvestment)}
@@ -68,6 +70,22 @@ export default async function DashboardPage() {
           icon={<Target />}
           iconBgColorClass="bg-orange-500/10"
           iconColorClass="text-orange-400"
+        />
+        <KpiCard
+          title="Cliques"
+          value={formatNumber(totalClicks)}
+          description="Total de cliques em todos os anúncios"
+          icon={<MousePointerClick />}
+          iconBgColorClass="bg-purple-500/10"
+          iconColorClass="text-purple-400"
+        />
+        <KpiCard
+          title="Impressões"
+          value={formatNumber(totalImpressions)}
+          description="Total de impressões"
+          icon={<Eye />}
+          iconBgColorClass="bg-indigo-500/10"
+          iconColorClass="text-indigo-400"
         />
       </div>
       <BrandPerformanceChart data={chartData} chartConfig={chartConfig} />

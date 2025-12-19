@@ -58,61 +58,79 @@ export async function getAiSummary(
 }
 
 function parseCSV(csvText: string): AdData[] {
-  const parseResult = Papa.parse<any>(csvText, { header: true, skipEmptyLines: true });
-  const data: AdData[] = [];
+    const parseResult = Papa.parse<any>(csvText, { header: true, skipEmptyLines: true });
+    const data: AdData[] = [];
 
-  const headers = parseResult.meta.fields?.map(h => h.trim().toLowerCase()) || [];
-  
-  const columnMapping: Record<string, string> = {
-      'reporting starts': 'date',
-      'amount spent (brl)': 'investment',
-      'leads': 'leads',
-      'cost per lead (brl)': 'cpl',
-      'campaign name': 'campaignName'
-  };
-  
-  const mappedHeaders = headers.reduce((acc, header) => {
-      const lowerHeader = header.toLowerCase();
-      for(const key in columnMapping) {
-          if (lowerHeader.includes(key)) {
-              acc[columnMapping[key] as string] = lowerHeader;
-          }
-      }
-      return acc;
-  }, {} as Record<string, string>);
+    const columnMapping: Record<string, string> = {
+        'date': 'reporting starts',
+        'account': 'account',
+        'campaignName': 'campaign name',
+        'adSetName': 'ad set name',
+        'adName': 'ad name',
+        'investment': 'amount spent (brl)',
+        'leads': 'leads',
+        'impressions': 'impressions',
+        'clicks': 'clicks (all)',
+        'cpl': 'cost per lead (brl)',
+        'cpc': 'cpc (all)',
+    };
 
-  if (!mappedHeaders.campaignName) {
-      throw new Error('A coluna "Campaign Name" não foi encontrada no CSV.');
-  }
+    const headers = parseResult.meta.fields?.map(h => h.trim().toLowerCase()) || [];
+    
+    const mappedHeaders = Object.keys(columnMapping).reduce((acc, key) => {
+        const csvHeader = columnMapping[key];
+        const foundHeader = headers.find(h => h.includes(csvHeader));
+        if (foundHeader) {
+            acc[key] = foundHeader;
+        }
+        return acc;
+    }, {} as Record<string, string>);
 
-  for (const [index, row] of parseResult.data.entries()) {
-      const campaignName = row[mappedHeaders.campaignName] || '';
-      const brand = BRANDS.find(b => campaignName.toLowerCase().includes(b.toLowerCase()));
+    if (!mappedHeaders.campaignName) {
+        throw new Error('A coluna "Campaign name" não foi encontrada no CSV.');
+    }
 
-      if (!brand) continue;
+    for (const [index, row] of parseResult.data.entries()) {
+        const campaignName = row[mappedHeaders.campaignName] || '';
+        const brand = BRANDS.find(b => campaignName.toLowerCase().includes(b.toLowerCase()));
 
-      const date = row[mappedHeaders.date];
-      const investment = parseFloat(row[mappedHeaders.investment]) || 0;
-      const leads = parseInt(row[mappedHeaders.leads], 10) || 0;
-      let cpl = parseFloat(row[mappedHeaders.cpl]) || 0;
-      
-      if(leads > 0 && investment > 0 && cpl === 0) {
-          cpl = investment / leads;
-      }
-      
-      if(date && brand){
-        data.push({
-            id: `${date}-${brand}-${index}`,
-            date,
-            brand,
-            investment,
-            leads,
-            cpl,
-        });
-      }
-  }
+        if (!brand) continue;
 
-  return data;
+        const date = row[mappedHeaders.date];
+        const investment = parseFloat(row[mappedHeaders.investment]) || 0;
+        const leads = parseInt(row[mappedHeaders.leads], 10) || 0;
+        const impressions = parseInt(row[mappedHeaders.impressions], 10) || 0;
+        const clicks = parseInt(row[mappedHeaders.clicks], 10) || 0;
+        let cpl = parseFloat(row[mappedHeaders.cpl]) || 0;
+        let cpc = parseFloat(row[mappedHeaders.cpc]) || 0;
+
+        if (leads > 0 && investment > 0 && cpl === 0) {
+            cpl = investment / leads;
+        }
+        if (clicks > 0 && investment > 0 && cpc === 0) {
+            cpc = investment / clicks;
+        }
+
+        if (date && brand) {
+            data.push({
+                id: `${date}-${brand}-${index}`,
+                date,
+                brand,
+                account: row[mappedHeaders.account] || 'N/A',
+                campaignName: row[mappedHeaders.campaignName] || 'N/A',
+                adSetName: row[mappedHeaders.adSetName] || 'N/A',
+                adName: row[mappedHeaders.adName] || 'N/A',
+                investment,
+                leads,
+                impressions,
+                clicks,
+                cpl,
+                cpc,
+            });
+        }
+    }
+
+    return data;
 }
 
 export async function uploadAdsData(formData: FormData) {

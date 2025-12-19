@@ -3,7 +3,7 @@ import { BRANDS, Brand } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { KpiCard } from '@/components/dashboard/kpi-card';
 import { formatCurrency, formatNumber } from '@/lib/utils';
-import { DollarSign, Target, Users } from 'lucide-react';
+import { DollarSign, Target, Users, MousePointerClick } from 'lucide-react';
 import { LeadsOverTimeChart } from '@/components/dashboard/leads-over-time-chart';
 import { AiSummary } from '@/components/dashboard/ai-summary';
 import { ChartConfig } from '@/components/ui/chart';
@@ -41,7 +41,8 @@ export default async function BrandPage({ params }: BrandPageProps) {
 
   const totalInvestment = brandData.reduce((sum, item) => sum + item.investment, 0);
   const totalLeads = brandData.reduce((sum, item) => sum + item.leads, 0);
-  const averageCpl = totalInvestment / totalLeads;
+  const totalClicks = brandData.reduce((sum, item) => sum + item.clicks, 0);
+  const averageCpl = totalLeads > 0 ? totalInvestment / totalLeads : 0;
   
   const chartData = brandData.map(item => ({
     date: item.date,
@@ -59,7 +60,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
 
   return (
     <div className="space-y-8 animate-in fade-in-50">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           title="Investimento"
           value={formatCurrency(totalInvestment)}
@@ -83,6 +84,14 @@ export default async function BrandPage({ params }: BrandPageProps) {
           icon={<Target />}
           iconBgColorClass="bg-orange-500/10"
           iconColorClass="text-orange-400"
+        />
+        <KpiCard
+          title="Cliques"
+          value={formatNumber(totalClicks)}
+          description={`Total de cliques em ${brand}`}
+          icon={<MousePointerClick />}
+          iconBgColorClass="bg-purple-500/10"
+          iconColorClass="text-purple-400"
         />
       </div>
 

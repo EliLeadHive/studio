@@ -4,8 +4,8 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 export default function DashboardLoading() {
   return (
     <div className="space-y-8">
-      <div className="grid gap-6 md:grid-cols-3">
-        {[...Array(3)].map((_, i) => (
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+        {[...Array(5)].map((_, i) => (
           <Card key={i} className="bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <Skeleton className="h-5 w-24" />
