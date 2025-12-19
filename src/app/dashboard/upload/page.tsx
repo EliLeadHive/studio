@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Upload, FileText, X, Loader2, CheckCircle } from 'lucide-react';
+import { Upload, FileText, X, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { uploadAdsData } from '@/lib/actions';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -17,7 +18,7 @@ export default function UploadPage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.type === 'text/csv') {
+      if (selectedFile.type === 'text/csv' || selectedFile.name.endsWith('.csv')) {
         setFile(selectedFile);
         setUploadSuccess(false);
       } else {
@@ -85,10 +86,16 @@ export default function UploadPage() {
             Upload de Dados do Meta Ads
           </CardTitle>
           <CardDescription>
-            Faça o upload do seu arquivo CSV exportado do Gerenciador de Anúncios da Meta.
+            Faça o upload do seu arquivo CSV exportado do Gerenciador de Anúncios da Meta. Os dados do upload serão substituídos pela sincronização com o Google Sheets, se configurada.
           </CardDescription>
         </CardHeader>
         <CardContent>
+           <Alert variant="default" className="mb-6 bg-blue-500/10 border-blue-500/30 text-foreground">
+              <AlertTriangle className="h-4 w-4 text-blue-400" />
+              <AlertDescription>
+                Esta página permite uma atualização manual. Se uma URL do Google Sheets estiver configurada, os dados serão sincronizados automaticamente, substituindo qualquer upload manual.
+              </AlertDescription>
+            </Alert>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div
               className="border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary transition-colors"

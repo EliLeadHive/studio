@@ -1,12 +1,19 @@
+// src/lib/actions.ts
 'use server';
 
 import { summarizeAdsInsights } from "@/ai/flows/summarize-ads-insights";
 import type { AdData, Brand } from "./types";
 import { BRANDS } from "./types";
+import Papa from 'papaparse';
 
-// This is a temporary in-memory store. 
+// This is a temporary in-memory store.
 // In a real application, you would use a database or a more persistent cache.
-let uploadedData: AdData[] = [];
+let adDataStore: AdData[] = [];
+
+// ! IMPORTANT !
+// Replace this with the actual URL of your Google Sheet published as CSV
+const GOOGLE_SHEET_CSV_URL = ''; // Example: 'https://docs.google.com/spreadsheets/d/e/.../pub?output=csv'
+
 
 interface FormState {
   message: string;
@@ -26,8 +33,8 @@ export async function getAiSummary(
   try {
     // Convert data to CSV string
     const headers = Object.keys(data[0]).join(',');
-    const rows = data.map(row => 
-      Object.values(row).map(val => 
+    const rows = data.map(row =>
+      Object.values(row).map(val =>
         typeof val === 'string' ? `"${val.replace(/"/g, '""')}"` : val
       ).join(',')
     );
@@ -37,7 +44,7 @@ export async function getAiSummary(
       brandName: brandName,
       adsData: csvData,
     });
-    
+
     if (!result.summary) {
       return { message: "error", summary: "A análise de IA não retornou um resultado." };
     }
@@ -49,68 +56,63 @@ export async function getAiSummary(
   }
 }
 
-// In-memory store for uploaded data
-let adDataStore: AdData[] = [];
-
 function parseCSV(csvText: string): AdData[] {
-    const lines = csvText.trim().split('\\n');
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-    const data = [];
+  const parseResult = Papa.parse<any>(csvText, { header: true, skipEmptyLines: true });
+  const data: AdData[] = [];
 
-    // Esses são os nomes de coluna esperados no CSV do Meta Ads
-    // Mapeie para os nomes de campo em `AdData`
-    const columnMapping: Record<string, keyof Omit<AdData, 'id' | 'brand'>> = {
-        'reporting starts': 'date',
-        'amount spent (brl)': 'investment',
-        'leads': 'leads',
-        'cost per lead (brl)': 'cpl',
-    };
-    
-    const campaignNameIndex = headers.indexOf('campaign name');
-    if (campaignNameIndex === -1) {
-        throw new Error('A coluna "Campaign Name" não foi encontrada no CSV.');
-    }
+  const headers = parseResult.meta.fields?.map(h => h.trim().toLowerCase()) || [];
+  
+  const columnMapping: Record<string, string> = {
+      'reporting starts': 'date',
+      'amount spent (brl)': 'investment',
+      'leads': 'leads',
+      'cost per lead (brl)': 'cpl',
+      'campaign name': 'campaignName'
+  };
+  
+  const mappedHeaders = headers.reduce((acc, header) => {
+      const lowerHeader = header.toLowerCase();
+      for(const key in columnMapping) {
+          if (lowerHeader.includes(key)) {
+              acc[columnMapping[key] as string] = lowerHeader;
+          }
+      }
+      return acc;
+  }, {} as Record<string, string>);
 
-    const requiredColumns = Object.keys(columnMapping);
-    const headerIndices = requiredColumns.reduce((acc, colName) => {
-        const index = headers.indexOf(colName.toLowerCase());
-        if (index === -1) {
-            throw new Error(`A coluna obrigatória "${colName}" não foi encontrada no CSV.`);
-        }
-        acc[colName] = index;
-        return acc;
-    }, {} as Record<string, number>);
+  if (!mappedHeaders.campaignName) {
+      throw new Error('A coluna "Campaign Name" não foi encontrada no CSV.');
+  }
 
-    for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',');
+  for (const [index, row] of parseResult.data.entries()) {
+      const campaignName = row[mappedHeaders.campaignName] || '';
+      const brand = BRANDS.find(b => campaignName.toLowerCase().includes(b.toLowerCase()));
 
-        const campaignName = values[campaignNameIndex]?.replace(/"/g, '') || '';
-        const brand = BRANDS.find(b => campaignName.toLowerCase().includes(b.toLowerCase()));
+      if (!brand) continue;
 
-        if (!brand) continue; // Pula linhas que não correspondem a uma marca conhecida
-
-        const date = values[headerIndices['reporting starts']]?.replace(/"/g, '');
-        const investment = parseFloat(values[headerIndices['amount spent (brl)']]?.replace(/"/g, '')) || 0;
-        const leads = parseInt(values[headerIndices['leads']]?.replace(/"/g, ''), 10) || 0;
-        
-        // CPL pode ser calculado ou pego do arquivo
-        let cpl = parseFloat(values[headerIndices['cost per lead (brl)']]?.replace(/"/g, '')) || 0;
-        if(leads > 0 && investment > 0 && cpl === 0) {
-            cpl = investment / leads;
-        }
-
+      const date = row[mappedHeaders.date];
+      const investment = parseFloat(row[mappedHeaders.investment]) || 0;
+      const leads = parseInt(row[mappedHeaders.leads], 10) || 0;
+      let cpl = parseFloat(row[mappedHeaders.cpl]) || 0;
+      
+      if(leads > 0 && investment > 0 && cpl === 0) {
+          cpl = investment / leads;
+      }
+      
+      if(date && brand){
         data.push({
-            id: `${date}-${brand}-${i}`,
+            id: `${date}-${brand}-${index}`,
             date,
             brand,
             investment,
             leads,
             cpl,
         });
-    }
-    return data;
-}
+      }
+  }
 
+  return data;
+}
 
 export async function uploadAdsData(formData: FormData) {
   try {
@@ -126,31 +128,54 @@ export async function uploadAdsData(formData: FormData) {
         return { success: false, error: 'Nenhum dado válido encontrado no arquivo. Verifique se os nomes das campanhas incluem as marcas e se as colunas estão corretas.' };
     }
     
-    // Replace the in-memory store with the new data
     adDataStore = parsedData;
 
-    return { success: true, rowCount: parsedData.length };
+    return { success: true, rowCount: parsedData.length, usingFile: true };
   } catch (error: any) {
     console.error('Error processing CSV:', error);
     return { success: false, error: error.message || 'Falha ao processar o arquivo CSV.' };
   }
 }
 
-export async function getUploadedAdsData({ brand, from, to }: { brand?: Brand; from?: Date; to?: Date } = {}) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 100));
+async function fetchAndParseSheetData(): Promise<AdData[]> {
+    if(!GOOGLE_SHEET_CSV_URL) {
+        // Se a URL não estiver definida, não faz nada.
+        return [];
+    }
+    try {
+        const response = await fetch(GOOGLE_SHEET_CSV_URL, { next: { revalidate: 3600 } }); // Cache de 1 hora
+        if (!response.ok) {
+            console.error(`Failed to fetch Google Sheet: ${response.statusText}`);
+            return [];
+        }
+        const csvText = await response.text();
+        return parseCSV(csvText);
+    } catch(error) {
+        console.error("Error fetching or parsing Google Sheet data:", error);
+        return [];
+    }
+}
+
+
+export async function getSynchronizedAdsData({ brand, from, to }: { brand?: Brand; from?: Date; to?: Date } = {}) {
+  // 1. Prioritize data from Google Sheet if URL is available.
+  if(GOOGLE_SHEET_CSV_URL) {
+    const sheetData = await fetchAndParseSheetData();
+    if(sheetData.length > 0) {
+        adDataStore = sheetData;
+    }
+  }
   
-  if (adDataStore.length === 0) {
-    return [];
+  // 2. Use in-memory data (from upload or from sheet cache) if available.
+  if (adDataStore.length > 0) {
+    let filteredData = adDataStore;
+    if (brand) {
+      filteredData = filteredData.filter(d => d.brand === brand);
+    }
+    // Date filtering logic would go here
+    return filteredData;
   }
 
-  let filteredData = adDataStore;
-
-  if (brand) {
-    filteredData = filteredData.filter(d => d.brand === brand);
-  }
-  
-  // Date filtering can be added here later
-
-  return filteredData;
+  // 3. Fallback to mock data if nothing else is available.
+  return []; // Returning empty array to avoid using mock data now.
 }

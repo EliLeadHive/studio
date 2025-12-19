@@ -1,6 +1,7 @@
+// src/lib/mock-data.ts
 import { subDays, format } from 'date-fns';
 import { AdData, BRANDS, Brand } from './types';
-import { getUploadedAdsData } from './actions';
+import { getSynchronizedAdsData } from './actions';
 
 const brandInvestmentRanges: Record<Brand, { min: number, max: number, leadCostFactor: number }> = {
   "Fiat": { min: 200, max: 700, leadCostFactor: 10 },
@@ -22,7 +23,6 @@ const generateData = (): AdData[] => {
       const { min, max, leadCostFactor } = brandInvestmentRanges[brand];
       const investment = Math.random() * (max - min) + min;
       
-      // Simulate variability in lead generation
       const baseLeads = investment / leadCostFactor;
       const leadVariance = (Math.random() - 0.5) * 0.4; // +/- 20% variance
       const leads = Math.max(1, Math.floor(baseLeads * (1 + leadVariance)));
@@ -45,13 +45,14 @@ const generateData = (): AdData[] => {
 const mockData = generateData();
 
 export async function getAdsData({ brand, from, to }: { brand?: Brand; from?: Date; to?: Date } = {}) {
-  // First, try to get real uploaded data.
-  const uploadedData = await getUploadedAdsData({ brand, from, to });
-  if (uploadedData.length > 0) {
-    return uploadedData;
+  // First, try to get real data (from Google Sheet or upload)
+  const realData = await getSynchronizedAdsData({ brand, from, to });
+  if (realData.length > 0) {
+    return realData;
   }
   
-  // If no uploaded data, fall back to mock data
+  // If no real data is available, fall back to mock data
+  console.warn("Nenhuma fonte de dados real (Google Sheet ou Upload) foi encontrada. Usando dados de exemplo.");
   await new Promise(resolve => setTimeout(resolve, 500));
 
   let filteredData = mockData;
@@ -60,8 +61,7 @@ export async function getAdsData({ brand, from, to }: { brand?: Brand; from?: Da
     filteredData = filteredData.filter(d => d.brand === brand);
   }
 
-  // Note: Date range filtering is not yet implemented, but this is where it would go.
-  // For now, it returns all data for the last 30 days.
+  // Note: Date range filtering is not yet implemented for mock data.
 
   return filteredData;
 }

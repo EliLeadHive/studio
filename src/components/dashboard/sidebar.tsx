@@ -11,7 +11,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Car, MapPin, PieChart, Upload } from 'lucide-react';
+import { Car, Link2, MapPin, PieChart, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BRANDS } from '@/lib/types';
@@ -60,10 +60,10 @@ export function Sidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/dashboard/upload'} tooltip="Upload de Dados">
+              <SidebarMenuButton asChild isActive={pathname === '/dashboard/upload'} tooltip="Upload Manual">
                 <Link href="/dashboard/upload">
                   <Upload />
-                  <span>Upload de Dados</span>
+                  <span>Upload Manual</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -101,11 +101,11 @@ export function Sidebar() {
       <SidebarFooter className="group-data-[collapsible=icon]:p-0">
          <div className="bg-card rounded-lg p-3 flex items-center gap-3 border border-border group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:border-none group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center">
             <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs border shrink-0">
-                CSV
+                <Link2 className="w-4 h-4" />
             </div>
             <div className="group-data-[collapsible=icon]:hidden">
                 <p className="text-xs font-bold text-foreground">Fonte de Dados</p>
-                <p className="text-[10px] text-muted-foreground" id="last-sync">{`Último upload: ${lastSync}`}</p>
+                <p className="text-[10px] text-muted-foreground" id="last-sync">{`Sincronizado: ${lastSync}`}</p>
             </div>
         </div>
       </SidebarFooter>
