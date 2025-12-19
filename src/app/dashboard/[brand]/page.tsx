@@ -6,6 +6,7 @@ import { formatCurrency, formatNumber } from '@/lib/utils';
 import { DollarSign, Target, Users } from 'lucide-react';
 import { LeadsOverTimeChart } from '@/components/dashboard/leads-over-time-chart';
 import { AiSummary } from '@/components/dashboard/ai-summary';
+import { ChartConfig } from '@/components/ui/chart';
 
 interface BrandPageProps {
   params: {
@@ -47,6 +48,15 @@ export default async function BrandPage({ params }: BrandPageProps) {
     Leads: item.leads,
   }));
 
+  const chartConfig = {
+    Leads: {
+      label: 'Leads',
+    },
+    date: {
+      label: 'Date',
+    }
+  } satisfies ChartConfig;
+
   return (
     <div className="space-y-8 animate-in fade-in-50">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -78,7 +88,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
 
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3">
-            <LeadsOverTimeChart data={chartData} />
+            <LeadsOverTimeChart data={chartData} chartConfig={chartConfig}/>
         </div>
         <div className="lg:col-span-2">
             <AiSummary brand={brand} data={brandData} />

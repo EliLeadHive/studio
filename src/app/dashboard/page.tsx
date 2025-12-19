@@ -4,6 +4,8 @@ import { formatCurrency, formatNumber } from '@/lib/utils';
 import { KpiCard } from '@/components/dashboard/kpi-card';
 import { DollarSign, Target, Users } from 'lucide-react';
 import { BrandPerformanceChart } from '@/components/dashboard/brand-performance-chart';
+import { ChartContainer, ChartConfig } from '@/components/ui/chart';
+import { BRANDS } from '@/lib/types';
 
 export default async function DashboardPage() {
   const data = await getAdsData();
@@ -11,19 +13,34 @@ export default async function DashboardPage() {
   const totalInvestment = data.reduce((sum, item) => sum + item.investment, 0);
   const totalLeads = data.reduce((sum, item) => sum + item.leads, 0);
   const averageCpl = totalInvestment / totalLeads;
-  
-  const brandData = data.reduce((acc, item) => {
-    if (!acc[item.brand]) {
-      acc[item.brand] = { leads: 0 };
-    }
-    acc[item.brand].leads += item.leads;
-    return acc;
-  }, {} as Record<string, { leads: number }>);
-  
+
+  const brandData = data.reduce(
+    (acc, item) => {
+      if (!acc[item.brand]) {
+        acc[item.brand] = { leads: 0 };
+      }
+      acc[item.brand].leads += item.leads;
+      return acc;
+    },
+    {} as Record<string, { leads: number }>
+  );
+
   const chartData = Object.entries(brandData).map(([name, values]) => ({
     name,
     Leads: values.leads,
   }));
+
+  const chartConfig = {
+    Leads: {
+      label: 'Leads',
+    },
+    ...BRANDS.reduce((acc, brand) => {
+      acc[brand] = {
+        label: brand,
+      };
+      return acc;
+    }, {} as Record<string, { label: string }>),
+  } satisfies ChartConfig;
 
   return (
     <div className="space-y-8 animate-in fade-in-50">
@@ -53,8 +70,7 @@ export default async function DashboardPage() {
           iconColorClass="text-orange-400"
         />
       </div>
-
-      <BrandPerformanceChart data={chartData} />
+      <BrandPerformanceChart data={chartData} chartConfig={chartConfig} />
     </div>
   );
 }
