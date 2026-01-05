@@ -6,6 +6,7 @@ import { DollarSign, Target, Users, MousePointerClick, Eye } from 'lucide-react'
 import { BrandPerformanceChart } from '@/components/dashboard/brand-performance-chart';
 import { ChartContainer, ChartConfig } from '@/components/ui/chart';
 import { BRANDS } from '@/lib/types';
+import { AiGeneralReport } from '@/components/dashboard/ai-general-report';
 
 export default async function DashboardPage() {
   const data = await getAdsData();
@@ -88,7 +89,10 @@ export default async function DashboardPage() {
           iconColorClass="text-indigo-400"
         />
       </div>
-      <BrandPerformanceChart data={chartData} chartConfig={chartConfig} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <BrandPerformanceChart data={chartData} chartConfig={chartConfig} />
+        <AiGeneralReport data={data} />
+      </div>
     </div>
   );
 }

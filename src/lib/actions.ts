@@ -1,6 +1,7 @@
 // src/lib/actions.ts
 'use server';
 
+import { generateMetaAdsReport } from "@/ai/flows/generate-meta-ads-report";
 import { summarizeAdsInsights } from "@/ai/flows/summarize-ads-insights";
 import type { AdData, Brand } from "./types";
 import { BRANDS } from "./types";
@@ -13,7 +14,7 @@ let adDataStore: AdData[] = [];
 
 // ! IMPORTANT !
 // Replace this with the actual URL of your Google Sheet published as CSV
-const GOOGLE_SHEET_CSV_URL = ''; // Example: 'https://docs.google.com/spreadsheets/d/e/.../pub?output=csv'
+const GOOGLE_SHEET_CSV_URL = '1dEylYB_N8F51bdVosMV5rjvAPW1tNud1KvSbDeyxrZQ'; // Example: 'https://docs.google.com/spreadsheets/d/e/.../pub?output=csv'
 
 
 interface FormState {
@@ -33,13 +34,7 @@ export async function getAiSummary(
 
   try {
     // Convert data to CSV string
-    const headers = Object.keys(data[0]).join(',');
-    const rows = data.map(row =>
-      Object.values(row).map(val =>
-        typeof val === 'string' ? `"${val.replace(/"/g, '""')}"` : val
-      ).join(',')
-    );
-    const csvData = [headers, ...rows].join('\n');
+    const csvData = Papa.unparse(data);
 
     const result = await summarizeAdsInsights({
       brandName: brandName,
@@ -54,6 +49,33 @@ export async function getAiSummary(
   } catch (e) {
     console.error(e);
     return { message: "error", summary: "Ocorreu um erro ao gerar a análise de IA." };
+  }
+}
+
+export async function getAiGeneralReport(
+  data: AdData[],
+  prevState: FormState,
+  formData: FormData
+): Promise<FormState> {
+   if (!data || data.length === 0) {
+    return { message: "error", summary: "Não há dados para gerar o relatório." };
+  }
+
+  try {
+    const csvData = Papa.unparse(data);
+
+    const result = await generateMetaAdsReport({
+      metaAdsData: csvData,
+    });
+
+    if (!result.report) {
+      return { message: "error", summary: "A análise de IA não retornou um relatório." };
+    }
+
+    return { message: "success", summary: result.report };
+  } catch (e) {
+    console.error(e);
+    return { message: "error", summary: "Ocorreu um erro ao gerar o relatório de IA." };
   }
 }
 
@@ -130,7 +152,7 @@ function parseCSV(csvText: string): AdData[] {
                 date,
                 brand,
                 account: row[mappedHeaders.account] || 'N/A',
-                campaignName: row[mappedHeaders.campaignName] || 'N/A',
+                campaignName: row[mappedHeaders.campaignName] || 'N-A',
                 adSetName: row[mappedHeaders.adSetName] || 'N/A',
                 adName: row[mappedHeaders.adName] || 'N/A',
                 investment,
