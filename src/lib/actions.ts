@@ -13,8 +13,8 @@ import { getMockData } from "./mock-data";
 let adDataStore: AdData[] = [];
 
 // ! IMPORTANT !
-// Replace this with the actual URL of your Google Sheet published as CSV
-const GOOGLE_SHEET_CSV_URL = '1dEylYB_N8F51bdVosMV5rjvAPW1tNud1KvSbDeyxrZQ'; // Example: 'https://docs.google.com/spreadsheets/d/e/.../pub?output=csv'
+// This now points to your published Google Sheet.
+const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1dEylYB_N8F51bdVosMV5rjvAPW1tNud1KvSbDeyxrZQ/pub?output=csv';
 
 
 interface FormState {
@@ -80,11 +80,17 @@ export async function getAiGeneralReport(
 }
 
 function findBrandInText(text: string): Brand | null {
+  if (!text) return null;
   const lowerCaseText = text.toLowerCase();
   for (const brand of BRANDS) {
     if (lowerCaseText.includes(brand.toLowerCase())) {
       return brand;
     }
+  }
+  // Fallback for Omoda/Jaecoo if they are in the same account
+  if (lowerCaseText.includes('omoda') || lowerCaseText.includes('jaecoo')) {
+      if (lowerCaseText.includes('omoda')) return 'Omoda';
+      if (lowerCaseText.includes('jaecoo')) return 'Jaecoo';
   }
   return null;
 }
@@ -111,6 +117,7 @@ function parseCSV(csvText: string): AdData[] {
     
     const mappedHeaders = Object.keys(columnMapping).reduce((acc, key) => {
         const csvHeader = columnMapping[key];
+        // Find a header that *includes* the expected text, making it more robust
         const foundHeader = headers.find(h => h.includes(csvHeader));
         if (foundHeader) {
             acc[key] = foundHeader;
@@ -118,8 +125,9 @@ function parseCSV(csvText: string): AdData[] {
         return acc;
     }, {} as Record<string, string>);
 
-    if (!mappedHeaders.campaignName) {
-        throw new Error('A coluna "Campaign name" não foi encontrada no CSV.');
+    if (!mappedHeaders.campaignName && !mappedHeaders.account) {
+        console.error('Nenhuma coluna de identificação ("Campaign name" ou "Account") foi encontrada.');
+        return []; // Return empty if we can't identify brands
     }
 
     for (const [index, row] of parseResult.data.entries()) {
@@ -132,12 +140,12 @@ function parseCSV(csvText: string): AdData[] {
         if (!brand) continue;
 
         const date = row[mappedHeaders.date];
-        const investment = parseFloat(row[mappedHeaders.investment]) || 0;
+        const investment = parseFloat(String(row[mappedHeaders.investment]).replace(',','.')) || 0;
         const leads = parseInt(row[mappedHeaders.leads], 10) || 0;
         const impressions = parseInt(row[mappedHeaders.impressions], 10) || 0;
         const clicks = parseInt(row[mappedHeaders.clicks], 10) || 0;
-        let cpl = parseFloat(row[mappedHeaders.cpl]) || 0;
-        let cpc = parseFloat(row[mappedHeaders.cpc]) || 0;
+        let cpl = parseFloat(String(row[mappedHeaders.cpl]).replace(',','.')) || 0;
+        let cpc = parseFloat(String(row[mappedHeaders.cpc]).replace(',','.')) || 0;
 
         if (leads > 0 && investment > 0 && cpl === 0) {
             cpl = investment / leads;
@@ -192,20 +200,20 @@ export async function uploadAdsData(formData: FormData) {
 }
 
 async function fetchAndParseSheetData(): Promise<AdData[]> {
-    if(!GOOGLE_SHEET_CSV_URL) {
-        // Se a URL não estiver definida, não faz nada.
+    if(!GOOGLE_SHEET_CSV_URL || !GOOGLE_SHEET_CSV_URL.includes('docs.google.com')) {
+        console.warn('URL do Google Sheets inválida ou não configurada.');
         return [];
     }
     try {
-        const response = await fetch(GOOGLE_SHEET_CSV_URL, { next: { revalidate: 3600 } }); // Cache de 1 hora
+        const response = await fetch(GOOGLE_SHEET_CSV_URL, { next: { revalidate: 600 } }); // Cache de 10 minutos
         if (!response.ok) {
-            console.error(`Failed to fetch Google Sheet: ${response.statusText}`);
+            console.error(`Falha ao buscar dados do Google Sheet: ${response.statusText}`);
             return [];
         }
         const csvText = await response.text();
         return parseCSV(csvText);
     } catch(error) {
-        console.error("Error fetching or parsing Google Sheet data:", error);
+        console.error("Erro ao buscar ou processar dados do Google Sheet:", error);
         return [];
     }
 }
@@ -213,11 +221,12 @@ async function fetchAndParseSheetData(): Promise<AdData[]> {
 
 export async function getSynchronizedAdsData({ brand, from, to }: { brand?: Brand; from?: Date; to?: Date } = {}) {
   // 1. Prioritize data from Google Sheet if URL is available.
-  if (GOOGLE_SHEET_CSV_URL) {
-    const sheetData = await fetchAndParseSheetData();
-    if (sheetData.length > 0) {
-      adDataStore = sheetData;
-    }
+  const sheetData = await fetchAndParseSheetData();
+  if (sheetData.length > 0) {
+    adDataStore = sheetData;
+    console.log(`Dados do Google Sheet carregados: ${sheetData.length} linhas.`);
+  } else {
+    console.log("Nenhum dado encontrado no Google Sheet, tentando usar dados em memória ou de exemplo.");
   }
 
   // 2. Use in-memory data (from upload or from sheet cache) if available.
