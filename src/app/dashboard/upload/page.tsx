@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Upload, FileText, X, Loader2, CheckCircle, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { uploadAdsData } from '@/lib/actions';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -86,14 +86,15 @@ export default function UploadPage() {
             Upload de Dados do Meta Ads
           </CardTitle>
           <CardDescription>
-            Faça o upload do seu arquivo CSV exportado do Gerenciador de Anúncios da Meta. Os dados do upload serão substituídos pela sincronização com o Google Sheets, se configurada.
+            Faça o upload do seu arquivo CSV exportado do Gerenciador de Anúncios da Meta.
           </CardDescription>
         </CardHeader>
         <CardContent>
            <Alert variant="default" className="mb-6 bg-blue-500/10 border-blue-500/30 text-foreground">
               <Info className="h-4 w-4 text-blue-400" />
+              <AlertTitle>Fonte de Dados Automática</AlertTitle>
               <AlertDescription>
-                Esta página permite uma atualização manual. Se uma URL do Google Sheets estiver configurada, os dados serão sincronizados automaticamente, substituindo qualquer upload manual.
+                Este dashboard está configurado para sincronizar automaticamente com uma planilha do Google Sheets. O upload manual será substituído na próxima sincronização.
               </AlertDescription>
             </Alert>
           <form onSubmit={handleSubmit} className="space-y-6">
