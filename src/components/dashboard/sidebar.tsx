@@ -68,22 +68,6 @@ export function Sidebar() {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/dashboard/upload'} tooltip="Upload Manual">
-                <Link href="/dashboard/upload">
-                  <Upload />
-                  <span>Upload Manual</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Inteligência de Lojas" disabled>
-                <Link href="#">
-                  <MapPin />
-                  <span>Inteligência de Lojas</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
         <SidebarSeparator />
