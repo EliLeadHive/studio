@@ -19,7 +19,9 @@ function processDataForMonthlyComparison(data: AdData[]): MonthlyMetric[] {
   const monthlyData = data.reduce((acc, item) => {
     try {
         const date = new Date(item.date);
-        date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+        // This line is crucial to avoid timezone issues.
+        // It treats the date as UTC to ensure consistent month grouping.
+        date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); 
         
         const monthYear = format(date, 'yyyy-MM');
 
@@ -104,8 +106,9 @@ export default function MonthlyComparisonPage() {
                     );
                     setMonthlyData(metricsWithObservations);
                     
-                    const startDate = format(new Date(monthlyMetrics[0].monthYear), 'MMMM yyyy', {locale: ptBR});
-                    const endDate = format(new Date(monthlyMetrics[monthlyMetrics.length - 1].monthYear), 'MMMM yyyy', {locale: ptBR});
+                    const startDate = format(new Date(monthlyMetrics[0].monthYear + '-02'), 'MMMM yyyy', {locale: ptBR});
+                    const endDate = format(new Date(monthlyMetrics[monthlyMetrics.length - 1].monthYear + '-02'), 'MMMM yyyy', {locale: ptBR});
+
                     setTitle(`Comparativo Mensal (de ${startDate} a ${endDate})`);
                     setSummary("A análise mostra a trajetória de sucesso e otimização. O mês de setembro se consagrou como o melhor do ano, com um recorde de conversões e o menor CPL registrado, validando a eficácia da estratégia de escala e da maturação das campanhas.");
                 }
@@ -128,7 +131,7 @@ export default function MonthlyComparisonPage() {
             <div className="flex flex-col items-center justify-center h-full text-center py-10">
                 <h2 className="text-xl font-semibold text-foreground">Nenhum dado mensal para comparar</h2>
                 <p className="text-muted-foreground mt-2">
-                    Verifique os dados na sua planilha para garantir que eles tenham datas válidas.
+                    Verifique se sua planilha está preenchida e tente recarregar a página.
                 </p>
             </div>
         );

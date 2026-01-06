@@ -137,6 +137,12 @@ function parseCSV(csvText: string): AdData[] {
         const foundHeader = headers.find(h => h.includes(csvHeader));
         if (foundHeader) {
             acc[key] = foundHeader;
+        } else {
+          // Fallback for exact match if includes fails
+          const exactHeader = headers.find(h => h === csvHeader);
+          if (exactHeader) {
+            acc[key] = exactHeader;
+          }
         }
         return acc;
     }, {} as Record<string, string>);
@@ -243,7 +249,7 @@ async function fetchAndParseSheetData(): Promise<AdData[]> {
 }
 
 
-export async function getAdsData({ brand, forceRefetch = false }: { brand?: Brand; forceRefetch?: boolean } = {}) {
+export async function getAdsData({ brand }: { brand?: Brand } = {}) {
   // Always fetch fresh data for this function call.
   // The fetch itself is cached for 5 minutes via Next.js revalidate mechanism.
   const sheetData = await fetchAndParseSheetData();
