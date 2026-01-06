@@ -13,7 +13,7 @@ let adDataStore: AdData[] = [];
 
 // ! IMPORTANT !
 // This now points to your published Google Sheet.
-const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1dEylYB_N8F51bdVosMV5rjvAPW1tNud1KvSbDeyxrZQ/pub?output=csv';
+const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR95K-QT-A53mB0iE9Wk2B--BTzgX3y_6f8g2gDB2sUP1y2u2V_d4dYc-i6rT4J-p01Q_h2K_1v-0o0/pub?gid=0&single=true&output=csv';
 
 
 interface FormState {
@@ -223,7 +223,7 @@ async function fetchAndParseSheetData(): Promise<AdData[]> {
     }
     try {
         // Use a random query parameter to bypass cache if needed, but revalidate is better
-        const response = await fetch(`${GOOGLE_SHEET_CSV_URL}&t=${new Date().getTime()}`, { 
+        const response = await fetch(GOOGLE_SHEET_CSV_URL, { 
             next: { revalidate: 300 } // Cache for 5 minutes
         });
 
@@ -243,7 +243,7 @@ async function fetchAndParseSheetData(): Promise<AdData[]> {
 }
 
 
-export async function getSynchronizedAdsData({ brand, forceRefetch = false }: { brand?: Brand; forceRefetch?: boolean } = {}) {
+export async function getAdsData({ brand, forceRefetch = false }: { brand?: Brand; forceRefetch?: boolean } = {}) {
   // If store is empty or a refetch is forced, get data from the sheet.
   if (adDataStore.length === 0 || forceRefetch) {
     const sheetData = await fetchAndParseSheetData();
@@ -263,3 +263,4 @@ export async function getSynchronizedAdsData({ brand, forceRefetch = false }: { 
   
   return filteredData;
 }
+
