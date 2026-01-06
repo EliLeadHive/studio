@@ -13,7 +13,7 @@ let adDataStore: AdData[] = [];
 
 // ! IMPORTANT !
 // This now points to your published Google Sheet.
-const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR95K-QT-A53mB0iE9Wk2B--BTzgX3y_6f8g2gDB2sUP1y2u2V_d4dYc-i6rT4J-p01Q_h2K_1v-0o0/pub?gid=0&single=true&output=csv';
+const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRh-NZm3LDmpGefyeGPsr_jzZuEmi5BDAs9fhk-HVt1Q4hMxOt0agbGJu-4ytDt2o-G0dp785KhiRN9/pub?output=csv';
 
 
 interface FormState {
@@ -244,18 +244,18 @@ async function fetchAndParseSheetData(): Promise<AdData[]> {
 
 
 export async function getAdsData({ brand, forceRefetch = false }: { brand?: Brand; forceRefetch?: boolean } = {}) {
-  // If store is empty or a refetch is forced, get data from the sheet.
-  if (adDataStore.length === 0 || forceRefetch) {
-    const sheetData = await fetchAndParseSheetData();
-    if (sheetData.length > 0) {
-      adDataStore = sheetData;
-      console.log(`Dados do Google Sheet carregados: ${adDataStore.length} linhas.`);
-    } else {
-      console.log("Nenhum dado encontrado no Google Sheet. A loja em memória está vazia.");
-    }
+  // Always fetch fresh data for this function call.
+  // The fetch itself is cached for 5 minutes via Next.js revalidate mechanism.
+  const sheetData = await fetchAndParseSheetData();
+  
+  if (sheetData.length > 0) {
+    adDataStore = sheetData;
+  } else {
+    // If fetching fails, we can rely on the last known data in the store as a fallback.
+    console.log("Nenhum dado novo encontrado no Google Sheet. Usando dados em memória, se disponíveis.");
   }
 
-  // Always work from the in-memory store after initial load.
+  // Always work from the in-memory store after attempting a fetch.
   let filteredData = adDataStore;
   if (brand) {
     filteredData = filteredData.filter(d => d.brand === brand);
