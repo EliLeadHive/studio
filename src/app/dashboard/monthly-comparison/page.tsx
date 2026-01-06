@@ -1,10 +1,10 @@
-import { getAdsData } from '@/lib/mock-data';
+import { getAdsData } from '@/lib/actions';
 import { AdData, MonthlyMetric } from '@/lib/types';
 import { notFound } from 'next/navigation';
-import { MonthlyComparisonClientPage } from '@/components/dashboard/monthly-comparison-client-page';
 import { getAiMonthlyObservation } from '@/lib/actions';
 import { ptBR } from 'date-fns/locale';
 import { format } from 'date-fns';
+import { MonthlyComparisonClientPage } from '@/components/dashboard/monthly-comparison-client-page';
 
 function processDataForMonthlyComparison(data: AdData[]): MonthlyMetric[] {
   if (!data || data.length === 0) {
@@ -53,19 +53,39 @@ export default async function MonthlyComparisonPage() {
   const allData = await getAdsData();
 
   if (!allData || allData.length === 0) {
-    notFound();
+    return (
+        <div className="flex flex-col items-center justify-center h-full text-center py-10">
+          <h2 className="text-xl font-semibold text-foreground">Nenhum dado encontrado</h2>
+          <p className="text-muted-foreground mt-2">
+            A planilha de dados parece estar vazia ou não foi possível carregá-la.
+          </p>
+        </div>
+      );
   }
 
   const monthlyMetrics = processDataForMonthlyComparison(allData);
+  
+  if (monthlyMetrics.length === 0) {
+    return (
+        <div className="flex flex-col items-center justify-center h-full text-center py-10">
+          <h2 className="text-xl font-semibold text-foreground">Nenhum dado mensal para comparar</h2>
+          <p className="text-muted-foreground mt-2">
+            Verifique os dados na sua planilha para garantir que eles tenham datas válidas.
+          </p>
+        </div>
+      );
+  }
 
   // Generate AI observations for each month
-  const metricsWithObservations: MonthlyMetric[] = [];
-  for (let i = 0; i < monthlyMetrics.length; i++) {
-    const currentMonth = monthlyMetrics[i];
-    const previousMonth = i > 0 ? monthlyMetrics[i - 1] : undefined;
-    const observation = await getAiMonthlyObservation(currentMonth, previousMonth);
-    metricsWithObservations.push({ ...currentMonth, observation });
-  }
+  const metricsWithObservations: MonthlyMetric[] = await Promise.all(
+    monthlyMetrics.map(async (metric, i) => {
+        const currentMonth = metric;
+        const previousMonth = i > 0 ? monthlyMetrics[i - 1] : undefined;
+        const observation = await getAiMonthlyObservation(currentMonth, previousMonth);
+        return { ...currentMonth, observation };
+    })
+  );
+
 
   // Create a summary of the whole period
   const startDate = format(new Date(monthlyMetrics[0].monthYear), 'MMMM yyyy', {locale: ptBR});
