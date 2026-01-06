@@ -263,4 +263,3 @@ export async function getAdsData({ brand, forceRefetch = false }: { brand?: Bran
   
   return filteredData;
 }
-
