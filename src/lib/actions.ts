@@ -128,9 +128,11 @@ function parseCSV(csvText: string): AdData[] {
         'cpl': 'cost per lead (brl)',
         'cpc': 'cpc (all)',
     };
-
+    
+    // Find the actual headers from the CSV, converting to lowercase for robustness
     const headers = parseResult.meta.fields?.map(h => h.trim().toLowerCase()) || [];
     
+    // Create a map from our desired keys (e.g., 'campaignName') to the actual header in the file
     const mappedHeaders = Object.keys(columnMapping).reduce((acc, key) => {
         const csvHeader = columnMapping[key];
         // Find a header that *includes* the expected text, making it more robust
@@ -142,6 +144,8 @@ function parseCSV(csvText: string): AdData[] {
           const exactHeader = headers.find(h => h === csvHeader);
           if (exactHeader) {
             acc[key] = exactHeader;
+          } else {
+             console.warn(`Coluna esperada não encontrada no CSV: '${csvHeader}' (para a chave '${key}')`);
           }
         }
         return acc;
@@ -153,6 +157,7 @@ function parseCSV(csvText: string): AdData[] {
     }
 
     for (const [index, row] of parseResult.data.entries()) {
+        // Use the mapped header to get the data from the row
         const campaignName = row[mappedHeaders.campaignName] || '';
         const adAccountName = row[mappedHeaders.account] || '';
 
