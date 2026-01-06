@@ -1,6 +1,7 @@
 // src/components/dashboard/ai-general-report.tsx
 'use client';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Lightbulb, Loader2 } from 'lucide-react';
@@ -33,7 +34,7 @@ export function AiGeneralReport({ data }: { data: AdData[] }) {
   const { toast } = useToast();
   const initialState = { message: '', summary: '' };
   const getAiReportWithData = getAiGeneralReport.bind(null, data);
-  const [state, formAction] = useFormState(getAiReportWithData, initialState);
+  const [state, formAction] = useActionState(getAiReportWithData, initialState);
 
   useEffect(() => {
     if (state.message === 'error' && state.summary) {

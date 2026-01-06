@@ -1,5 +1,6 @@
 'use client';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Lightbulb, Loader2, ServerCrash } from 'lucide-react';
@@ -32,7 +33,7 @@ export function AiSummary({ brand, data }: { brand: Brand; data: AdData[] }) {
   const { toast } = useToast();
   const initialState = { message: '', summary: '' };
   const getAiSummaryWithData = getAiSummary.bind(null, brand, data);
-  const [state, formAction] = useFormState(getAiSummaryWithData, initialState);
+  const [state, formAction] = useActionState(getAiSummaryWithData, initialState);
 
   useEffect(() => {
     if (state.message === 'error' && state.summary) {

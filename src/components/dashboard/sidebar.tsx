@@ -73,7 +73,7 @@ export function Sidebar() {
         <SidebarSeparator />
         <SidebarGroup>
           <SidebarGroupLabel>Marcas</SidebarGroupLabel>
-          <ScrollArea className="h-[calc(100vh-400px)]">
+          <ScrollArea className="h-[calc(100vh-320px)]">
             <SidebarMenu>
               {BRANDS.map((brand) => (
                 <SidebarMenuItem key={brand}>
@@ -91,6 +91,19 @@ export function Sidebar() {
               ))}
             </SidebarMenu>
           </ScrollArea>
+        </SidebarGroup>
+        <SidebarSeparator />
+        <SidebarGroup>
+            <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/upload')} tooltip="Upload de Dados">
+                        <Link href="/dashboard/upload">
+                            <Upload />
+                            <span>Upload de Dados</span>
+                        </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="group-data-[collapsible=icon]:p-0">
