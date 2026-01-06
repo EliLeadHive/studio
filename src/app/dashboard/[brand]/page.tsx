@@ -1,4 +1,4 @@
-import { getAdsData } from '@/lib/mock-data';
+import { getAdsData } from '@/lib/actions';
 import { BRANDS, Brand } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { KpiCard } from '@/components/dashboard/kpi-card';
