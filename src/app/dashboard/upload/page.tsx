@@ -94,7 +94,7 @@ export default function UploadPage() {
               <Info className="h-4 w-4 text-blue-400" />
               <AlertTitle>Fonte de Dados Automática</AlertTitle>
               <AlertDescription>
-                Este dashboard está configurado para sincronizar automaticamente com uma planilha do Google Sheets. O upload manual será substituído na próxima sincronização.
+                Este dashboard sincroniza com uma planilha Google Sheets. O upload manual será substituído na próxima sincronização automática.
               </AlertDescription>
             </Alert>
           <form onSubmit={handleSubmit} className="space-y-6">
