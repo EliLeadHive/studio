@@ -3,13 +3,12 @@
 
 import { generateMetaAdsReport } from "@/ai/flows/generate-meta-ads-report";
 import { summarizeAdsInsights } from "@/ai/flows/summarize-ads-insights";
-import type { AdData, Brand } from "./types";
+import { generateMonthlyObservation } from "@/ai/flows/generate-monthly-observation";
+import type { AdData, Brand, MonthlyMetric } from "./types";
 import { BRANDS } from "./types";
 import Papa from 'papaparse';
-import { getMockData } from "./mock-data";
 
-// This is a temporary in-memory store.
-// In a real application, you would use a database or a more persistent cache.
+// This is a temporary in-memory store. It's populated by the Google Sheet fetch.
 let adDataStore: AdData[] = [];
 
 // ! IMPORTANT !
@@ -78,6 +77,23 @@ export async function getAiGeneralReport(
     return { message: "error", summary: "Ocorreu um erro ao gerar o relatório de IA." };
   }
 }
+
+export async function getAiMonthlyObservation(
+  currentMonthMetric: MonthlyMetric,
+  previousMonthMetric?: MonthlyMetric
+) {
+  try {
+    const result = await generateMonthlyObservation({
+      currentMonth: currentMonthMetric,
+      previousMonth: previousMonthMetric
+    })
+    return result.observation;
+  } catch (e) {
+    console.error(e);
+    return "Não foi possível gerar a observação.";
+  }
+}
+
 
 function findBrandInText(text: string): Brand | null {
   if (!text) return null;
@@ -190,6 +206,7 @@ export async function uploadAdsData(formData: FormData) {
         return { success: false, error: 'Nenhum dado válido encontrado no arquivo. Verifique se os nomes das campanhas ou contas incluem as marcas e se as colunas estão corretas.' };
     }
     
+    // Replace in-memory store with uploaded data
     adDataStore = parsedData;
 
     return { success: true, rowCount: parsedData.length, usingFile: true };
@@ -205,41 +222,44 @@ async function fetchAndParseSheetData(): Promise<AdData[]> {
         return [];
     }
     try {
-        const response = await fetch(GOOGLE_SHEET_CSV_URL, { next: { revalidate: 600 } }); // Cache de 10 minutos
+        // Use a random query parameter to bypass cache if needed, but revalidate is better
+        const response = await fetch(`${GOOGLE_SHEET_CSV_URL}&t=${new Date().getTime()}`, { 
+            next: { revalidate: 300 } // Cache for 5 minutes
+        });
+
         if (!response.ok) {
             console.error(`Falha ao buscar dados do Google Sheet: ${response.statusText}`);
-            return [];
+            return []; // Return empty, so we might fall back to store
         }
         const csvText = await response.text();
+        if (!csvText) {
+            return [];
+        }
         return parseCSV(csvText);
     } catch(error) {
         console.error("Erro ao buscar ou processar dados do Google Sheet:", error);
-        return [];
+        return []; // Return empty on error
     }
 }
 
 
-export async function getSynchronizedAdsData({ brand, from, to }: { brand?: Brand; from?: Date; to?: Date } = {}) {
-  // 1. Prioritize data from Google Sheet if URL is available.
-  const sheetData = await fetchAndParseSheetData();
-  if (sheetData.length > 0) {
-    adDataStore = sheetData;
-    console.log(`Dados do Google Sheet carregados: ${sheetData.length} linhas.`);
-  } else {
-    console.log("Nenhum dado encontrado no Google Sheet, tentando usar dados em memória ou de exemplo.");
-  }
-
-  // 2. Use in-memory data (from upload or from sheet cache) if available.
-  if (adDataStore.length > 0) {
-    let filteredData = adDataStore;
-    if (brand) {
-      filteredData = filteredData.filter(d => d.brand === brand);
+export async function getSynchronizedAdsData({ brand, forceRefetch = false }: { brand?: Brand; forceRefetch?: boolean } = {}) {
+  // If store is empty or a refetch is forced, get data from the sheet.
+  if (adDataStore.length === 0 || forceRefetch) {
+    const sheetData = await fetchAndParseSheetData();
+    if (sheetData.length > 0) {
+      adDataStore = sheetData;
+      console.log(`Dados do Google Sheet carregados: ${adDataStore.length} linhas.`);
+    } else {
+      console.log("Nenhum dado encontrado no Google Sheet. A loja em memória está vazia.");
     }
-    // Date filtering logic would go here
-    return filteredData;
   }
 
-  // 3. Fallback to mock data if nothing else is available.
-  console.warn("Nenhuma fonte de dados real (Google Sheet ou Upload) foi encontrada. Usando dados de exemplo.");
-  return getMockData({ brand, from, to });
+  // Always work from the in-memory store after initial load.
+  let filteredData = adDataStore;
+  if (brand) {
+    filteredData = filteredData.filter(d => d.brand === brand);
+  }
+  
+  return filteredData;
 }

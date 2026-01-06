@@ -2,6 +2,10 @@
 import { subDays, format } from 'date-fns';
 import { AdData, BRANDS, Brand } from './types';
 
+// NOTE: This file is no longer the primary source of data.
+// It is only used for type definitions and local fallbacks if the primary data source fails.
+// The main data fetching logic is in src/lib/actions.ts through getSynchronizedAdsData.
+
 const brandInvestmentRanges: Record<Brand, { min: number, max: number, leadCostFactor: number, clickCostFactor: number }> = {
   "Fiat": { min: 200, max: 700, leadCostFactor: 10, clickCostFactor: 1.5 },
   "Jeep": { min: 300, max: 900, leadCostFactor: 25, clickCostFactor: 3 },
@@ -70,10 +74,15 @@ const generateData = (): AdData[] => {
   return data;
 };
 
-const mockData = generateData();
+let mockData: AdData[] = [];
 
 // This function now returns mock data synchronously and is renamed to avoid confusion.
 export function getMockData({ brand, from, to }: { brand?: Brand; from?: Date; to?: Date } = {}): AdData[] {
+  // Generate mock data only if it hasn't been generated yet.
+  if (mockData.length === 0) {
+    mockData = generateData();
+  }
+  
   let filteredData = mockData;
 
   if (brand) {

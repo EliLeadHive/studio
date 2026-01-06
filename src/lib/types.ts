@@ -37,3 +37,14 @@ export interface AdData {
   cpl: number;
   cpc: number;
 }
+
+export interface MonthlyMetric {
+  month: string;
+  year: number;
+  monthYear: string;
+  investment: number;
+  conversions: number;
+  reach: number;
+  cpl: number;
+  observation?: string;
+}

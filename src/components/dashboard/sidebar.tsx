@@ -11,7 +11,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Car, Link2, MapPin, PieChart, Upload } from 'lucide-react';
+import { Car, Link2, MapPin, PieChart, Upload, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BRANDS } from '@/lib/types';
@@ -57,6 +57,14 @@ export function Sidebar() {
                 <Link href="/dashboard">
                   <PieChart />
                   <span>Dashboard Executivo</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/monthly-comparison')} tooltip="Comparativo Mensal">
+                <Link href="/dashboard/monthly-comparison">
+                  <BarChart3 />
+                  <span>Comparativo Mensal</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
