@@ -115,38 +115,32 @@ function parseCSV(csvText: string): AdData[] {
     const parseResult = Papa.parse<any>(csvText, { header: true, skipEmptyLines: true });
     const data: AdData[] = [];
 
+    // Corrected column mapping to match the CSV headers exactly
     const columnMapping: Record<string, string> = {
-        'date': 'reporting starts',
-        'account': 'account',
-        'campaignName': 'campaign name',
-        'adSetName': 'ad set name',
-        'adName': 'ad name',
-        'investment': 'amount spent (brl)',
-        'leads': 'leads',
-        'impressions': 'impressions',
-        'clicks': 'clicks (all)',
-        'cpl': 'cost per lead (brl)',
-        'cpc': 'cpc (all)',
+        'date': 'Reporting starts',
+        'account': 'Account',
+        'campaignName': 'Campaign name',
+        'adSetName': 'Ad set name',
+        'adName': 'Ad name',
+        'investment': 'Amount spent (BRL)',
+        'leads': 'Leads',
+        'impressions': 'Impressions',
+        'clicks': 'Clicks (all)',
+        'cpl': 'Cost per lead (BRL)',
+        'cpc': 'CPC (all)',
     };
     
-    // Find the actual headers from the CSV, converting to lowercase for robustness
-    const headers = parseResult.meta.fields?.map(h => h.trim().toLowerCase()) || [];
+    // Find the actual headers from the CSV
+    const headers = parseResult.meta.fields?.map(h => h.trim()) || [];
     
     // Create a map from our desired keys (e.g., 'campaignName') to the actual header in the file
     const mappedHeaders = Object.keys(columnMapping).reduce((acc, key) => {
         const csvHeader = columnMapping[key];
-        // Find a header that *includes* the expected text, making it more robust
-        const foundHeader = headers.find(h => h.includes(csvHeader));
+        const foundHeader = headers.find(h => h === csvHeader);
         if (foundHeader) {
             acc[key] = foundHeader;
         } else {
-          // Fallback for exact match if includes fails
-          const exactHeader = headers.find(h => h === csvHeader);
-          if (exactHeader) {
-            acc[key] = exactHeader;
-          } else {
-             console.warn(`Coluna esperada não encontrada no CSV: '${csvHeader}' (para a chave '${key}')`);
-          }
+            console.warn(`Coluna esperada não encontrada no CSV: '${csvHeader}' (para a chave '${key}')`);
         }
         return acc;
     }, {} as Record<string, string>);
@@ -157,11 +151,9 @@ function parseCSV(csvText: string): AdData[] {
     }
 
     for (const [index, row] of parseResult.data.entries()) {
-        // Use the mapped header to get the data from the row
         const campaignName = row[mappedHeaders.campaignName] || '';
         const adAccountName = row[mappedHeaders.account] || '';
 
-        // Try to find brand in campaign name, then in account name
         const brand = findBrandInText(campaignName) || findBrandInText(adAccountName);
 
         if (!brand) continue;
