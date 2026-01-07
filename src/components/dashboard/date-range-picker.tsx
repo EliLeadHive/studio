@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { format, parseISO, isValid } from 'date-fns';
+import { isValid, parseISO } from 'date-fns';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,16 +14,22 @@ export function DateRangePicker({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const initialFrom = searchParams.get('from');
-  const initialTo = searchParams.get('to');
+  // Initialize state to be empty on both server and client initially
+  const [dateFrom, setDateFrom] = React.useState('');
+  const [dateTo, setDateTo] = React.useState('');
 
-  const [dateFrom, setDateFrom] = React.useState(initialFrom || '');
-  const [dateTo, setDateTo] = React.useState(initialTo || '');
-
+  // This useEffect runs only on the client, after hydration.
+  // This prevents the server-rendered HTML from mismatching the client-rendered HTML.
   React.useEffect(() => {
-    setDateFrom(initialFrom || '');
-    setDateTo(initialTo || '');
-  }, [initialFrom, initialTo]);
+    const fromParam = searchParams.get('from');
+    const toParam = searchParams.get('to');
+    if (fromParam) {
+      setDateFrom(fromParam);
+    }
+    if (toParam) {
+      setDateTo(toParam);
+    }
+  }, [searchParams]);
 
   const handleApply = () => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
