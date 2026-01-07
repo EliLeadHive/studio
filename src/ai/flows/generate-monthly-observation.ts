@@ -48,12 +48,14 @@ Current Month ({{currentMonth.month}}):
 - Investment: R$ {{currentMonth.investment}}
 - Conversions: {{currentMonth.conversions}}
 - CPL: R$ {{currentMonth.cpl}}
+- Reach: {{currentMonth.reach}}
 
 {{#if previousMonth}}
 Previous Month ({{previousMonth.month}}):
 - Investment: R$ {{previousMonth.investment}}
 - Conversions: {{previousMonth.conversions}}
 - CPL: R$ {{previousMonth.cpl}}
+- Reach: {{previousMonth.reach}}
 {{/if}}
 
 Based on this data, provide a concise observation.
