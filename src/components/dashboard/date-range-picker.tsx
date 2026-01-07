@@ -3,8 +3,6 @@
 
 import * as React from 'react';
 import {
-  isValid,
-  parseISO,
   format,
   subDays,
   startOfToday,
@@ -51,13 +49,13 @@ export function DateRangePicker({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Initialize state to be empty on both server and client initially
   const [dateFrom, setDateFrom] = React.useState('');
   const [dateTo, setDateTo] = React.useState('');
   const [preset, setPreset] = React.useState('custom');
+  const [isClient, setIsClient] = React.useState(false);
 
-  // This useEffect runs only on the client, after hydration.
   React.useEffect(() => {
+    setIsClient(true);
     const fromParam = searchParams.get('from');
     const toParam = searchParams.get('to');
     if (fromParam) {
@@ -66,7 +64,6 @@ export function DateRangePicker({
     if (toParam) {
       setDateTo(toParam);
     }
-    // If there are params, it's a custom range unless a preset matches exactly
     if(fromParam || toParam) {
         setPreset('custom');
     }
@@ -143,7 +140,7 @@ export function DateRangePicker({
             toDate = lastMonthEnd;
             break;
         case 'custom':
-            return; // Do nothing for custom
+            return; 
         default:
             return;
     }
@@ -161,6 +158,10 @@ export function DateRangePicker({
     setDateTo('');
     setPreset('custom');
     applyDateChange('', '');
+  }
+
+  if (!isClient) {
+    return null;
   }
 
   return (
