@@ -1,9 +1,10 @@
+
 import { getAdsData } from '@/lib/actions';
 import { BRANDS, Brand } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { KpiCard } from '@/components/dashboard/kpi-card';
 import { formatCurrency, formatNumber } from '@/lib/utils';
-import { DollarSign, Target, Users, MousePointerClick } from 'lucide-react';
+import { DollarSign, Target, Users, MousePointerClick, Eye } from 'lucide-react';
 import { LeadsOverTimeChart } from '@/components/dashboard/leads-over-time-chart';
 import { AiSummary } from '@/components/dashboard/ai-summary';
 import { ChartConfig } from '@/components/ui/chart';
@@ -47,6 +48,7 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
   const totalInvestment = brandData.reduce((sum, item) => sum + item.investment, 0);
   const totalLeads = brandData.reduce((sum, item) => sum + item.leads, 0);
   const totalClicks = brandData.reduce((sum, item) => sum + item.clicks, 0);
+  const totalImpressions = brandData.reduce((sum, item) => sum + item.impressions, 0);
   const averageCpl = totalLeads > 0 ? totalInvestment / totalLeads : 0;
   
   const chartData = brandData.map(item => ({
@@ -65,7 +67,7 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
 
   return (
     <div className="space-y-8 animate-in fade-in-50">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         <KpiCard
           title="Investimento"
           value={formatCurrency(totalInvestment)}
@@ -97,6 +99,14 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
           icon={<MousePointerClick />}
           iconBgColorClass="bg-purple-500/10"
           iconColorClass="text-purple-400"
+        />
+         <KpiCard
+          title="Impressões"
+          value={formatNumber(totalImpressions)}
+          description={`Total de impressões em ${brand}`}
+          icon={<Eye />}
+          iconBgColorClass="bg-indigo-500/10"
+          iconColorClass="text-indigo-400"
         />
       </div>
 
