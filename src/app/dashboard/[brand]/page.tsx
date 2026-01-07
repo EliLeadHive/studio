@@ -1,6 +1,6 @@
 
 import { getAdsData } from '@/lib/actions';
-import { BRANDS, Brand } from '@/lib/types';
+import { BRANDS, Brand, AdData } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { KpiCard } from '@/components/dashboard/kpi-card';
 import { formatCurrency, formatNumber } from '@/lib/utils';
@@ -9,6 +9,7 @@ import { LeadsOverTimeChart } from '@/components/dashboard/leads-over-time-chart
 import { AiSummary } from '@/components/dashboard/ai-summary';
 import { ChartConfig } from '@/components/ui/chart';
 import { parseISO } from 'date-fns';
+import { CampaignPerformance } from '@/components/dashboard/campaign-performance';
 
 interface BrandPageProps {
   params: {
@@ -27,6 +28,15 @@ export async function generateStaticParams() {
   return BRANDS.map((brand) => ({
     brand: brand.toLowerCase(),
   }))
+}
+
+export interface CampaignMetrics {
+    campaignName: string;
+    investment: number;
+    leads: number;
+    clicks: number;
+    impressions: number;
+    cpl: number;
 }
 
 export default async function BrandPage({ params, searchParams }: BrandPageProps) {
@@ -64,6 +74,22 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
       label: 'Date',
     }
   } satisfies ChartConfig;
+
+  const campaignData = Object.values(brandData.reduce((acc, item) => {
+    const campaignName = item.campaignName || 'Campanha sem nome';
+    if (!acc[campaignName]) {
+        acc[campaignName] = { campaignName, investment: 0, leads: 0, clicks: 0, impressions: 0 };
+    }
+    acc[campaignName].investment += item.investment;
+    acc[campaignName].leads += item.leads;
+    acc[campaignName].clicks += item.clicks;
+    acc[campaignName].impressions += item.impressions;
+    return acc;
+  }, {} as Record<string, Omit<CampaignMetrics, 'cpl'>>)).map(campaign => ({
+    ...campaign,
+    cpl: campaign.leads > 0 ? campaign.investment / campaign.leads : 0,
+  })).sort((a, b) => b.leads - a.leads);
+
 
   return (
     <div className="space-y-8 animate-in fade-in-50">
@@ -118,6 +144,8 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
             <AiSummary brand={brand} data={brandData} />
         </div>
       </div>
+
+      <CampaignPerformance campaigns={campaignData} />
     </div>
   );
 }
