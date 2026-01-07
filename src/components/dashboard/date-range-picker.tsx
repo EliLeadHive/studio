@@ -57,34 +57,34 @@ export function DateRangePicker({
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-center gap-4 rounded-lg border bg-card text-card-foreground shadow-sm p-4">
-        <div className="flex items-center gap-2">
-            <Label htmlFor="date-start" className="font-semibold text-sm shrink-0">De:</Label>
+    <div className="flex flex-col sm:flex-row items-center gap-2 rounded-lg border bg-card text-card-foreground shadow-sm p-2">
+        <div className="flex items-center gap-1.5">
+            <Label htmlFor="date-start" className="font-semibold text-xs shrink-0">De:</Label>
             <Input 
                 type="date" 
                 id="date-start" 
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-auto"
+                className="w-auto h-8 text-xs"
                 aria-label="Data de início"
             />
         </div>
-        <div className="flex items-center gap-2">
-            <Label htmlFor="date-end" className="font-semibold text-sm shrink-0">Até:</Label>
+        <div className="flex items-center gap-1.5">
+            <Label htmlFor="date-end" className="font-semibold text-xs shrink-0">Até:</Label>
             <Input 
                 type="date" 
                 id="date-end" 
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-auto"
+                className="w-auto h-8 text-xs"
                 aria-label="Data de fim"
             />
         </div>
-        <div className="flex items-center gap-2">
-            <Button onClick={handleApply}>
+        <div className="flex items-center gap-1">
+            <Button onClick={handleApply} size="sm" className="h-8">
                 Atualizar
             </Button>
-            <Button onClick={handleClear} variant="ghost">
+            <Button onClick={handleClear} variant="ghost" size="sm" className="h-8">
                 Limpar
             </Button>
         </div>
