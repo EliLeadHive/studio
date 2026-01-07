@@ -1,3 +1,4 @@
+
 // src/lib/actions.ts
 'use server';
 
@@ -100,7 +101,6 @@ function findBrandInText(text: string): Brand | null {
   if (!text) return null;
   const lowerCaseText = text.toLowerCase();
   for (const brand of BRANDS) {
-    // Ensure comparison is case-insensitive for the brand name as well
     if (lowerCaseText.includes(brand.toLowerCase())) {
       return brand;
     }
@@ -110,63 +110,78 @@ function findBrandInText(text: string): Brand | null {
 
 function parseCSV(csvText: string): AdData[] {
     const cleanCsvText = csvText.trim();
-    const parseResult = Papa.parse<any>(cleanCsvText, { header: true, skipEmptyLines: true });
+    const parseResult = Papa.parse<any>(cleanCsvText, { header: true, skipEmptyLines: true, trimHeaders: true });
     const data: AdData[] = [];
     
     if (parseResult.errors.length > 0) {
         console.warn("Erros de parsing encontrados no CSV:", parseResult.errors);
     }
 
-    // Corrected column mapping to match the CSV headers exactly
-    const columnMapping: Record<string, string> = {
-        'date': 'Reporting starts',
-        'account': 'Account',
-        'campaignName': 'Campaign name',
-        'adSetName': 'Ad set name',
-        'adName': 'Ad name',
-        'investment': 'Amount spent (BRL)',
-        'leads': 'Leads',
-        'impressions': 'Impressions',
-        'clicks': 'Clicks (all)',
-        'cpl': 'Cost per lead (BRL)',
-        'cpc': 'CPC (all)',
+    const columnMapping: Record<string, string[]> = {
+        'date': ['data'],
+        'account': ['lojas', 'account'],
+        'campaignName': ['nome da campanha', 'campaign name'],
+        'adSetName': ['nome do conjunto de anúncios', 'ad set name'],
+        'adName': ['nome do anúncio', 'ad name'],
+        'investment': ['investimento', 'amount spent (brl)'],
+        'leads': ['leads'],
+        'impressions': ['impressões', 'impressions'],
+        'clicks': ['cliques', 'clicks (all)'],
+        'cpl': ['custo por lead', 'cost per lead (brl)'],
+        'cpc': ['cpc', 'cpc (all)'],
     };
     
-    // Find the actual headers from the CSV
-    const headers = parseResult.meta.fields?.map(h => h.trim()) || [];
+    const headers = parseResult.meta.fields?.map(h => h.toLowerCase()) || [];
     
-    // Create a map from our desired keys (e.g., 'campaignName') to the actual header in the file
-    const mappedHeaders = Object.keys(columnMapping).reduce((acc, key) => {
-        const csvHeader = columnMapping[key];
-        const foundHeader = headers.find(h => h.toLowerCase() === csvHeader.toLowerCase());
+    const mappedHeaders: Record<string, string | undefined> = {};
+    for (const key in columnMapping) {
+        const possibleHeaders = columnMapping[key];
+        const foundHeader = headers.find(h => possibleHeaders.includes(h));
         if (foundHeader) {
-            acc[key] = foundHeader;
+            mappedHeaders[key] = parseResult.meta.fields?.find(h => h.toLowerCase() === foundHeader);
         } else {
-            console.warn(`Coluna esperada não encontrada no CSV: '${csvHeader}' (para a chave '${key}')`);
+             // Fallback for some of the original english headers, just in case
+            const fallbackMap: Record<string,string> = {
+                'date': 'Reporting starts',
+                'campaignName': 'Campaign name',
+                'investment': 'Amount spent (BRL)',
+                'impressions': 'Impressions',
+                'clicks': 'Clicks (all)',
+                'cpl': 'Cost per lead (BRL)',
+            }
+            if(fallbackMap[key]) {
+                 const foundFallbackHeader = headers.find(h => h.toLowerCase() === fallbackMap[key].toLowerCase());
+                 if(foundFallbackHeader) {
+                    mappedHeaders[key] = parseResult.meta.fields?.find(h => h.toLowerCase() === foundFallbackHeader);
+                 } else {
+                    console.warn(`Coluna esperada não encontrada no CSV para a chave '${key}'. Tentativas: ${possibleHeaders.join(', ')}`);
+                 }
+            } else {
+                console.warn(`Coluna esperada não encontrada no CSV para a chave '${key}'. Tentativas: ${possibleHeaders.join(', ')}`);
+            }
         }
-        return acc;
-    }, {} as Record<string, string>);
+    }
 
     if (!mappedHeaders.campaignName && !mappedHeaders.account) {
-        console.error('Nenhuma coluna de identificação ("Campaign name" ou "Account") foi encontrada.');
-        return []; // Return empty if we can't identify brands
+        console.error('Nenhuma coluna de identificação ("Nome da Campanha" ou "Lojas") foi encontrada.');
+        return [];
     }
 
     for (const [index, row] of parseResult.data.entries()) {
-        const campaignName = row[mappedHeaders.campaignName] || '';
-        const adAccountName = row[mappedHeaders.account] || '';
+        const campaignName = row[mappedHeaders.campaignName!] || '';
+        const adAccountName = row[mappedHeaders.account!] || '';
 
         const brand = findBrandInText(campaignName) || findBrandInText(adAccountName);
 
         if (!brand) continue;
 
-        const date = row[mappedHeaders.date];
-        const investment = parseFloat(String(row[mappedHeaders.investment]).replace(',','.')) || 0;
-        const leads = parseInt(row[mappedHeaders.leads], 10) || 0;
-        const impressions = parseInt(row[mappedHeaders.impressions], 10) || 0;
-        const clicks = parseInt(row[mappedHeaders.clicks], 10) || 0;
-        let cpl = parseFloat(String(row[mappedHeaders.cpl]).replace(',','.')) || 0;
-        let cpc = parseFloat(String(row[mappedHeaders.cpc]).replace(',','.')) || 0;
+        const date = row[mappedHeaders.date!];
+        const investment = parseFloat(String(row[mappedHeaders.investment!]).replace(',','.')) || 0;
+        const leads = parseInt(row[mappedHeaders.leads!], 10) || 0;
+        const impressions = parseInt(row[mappedHeaders.impressions!], 10) || 0;
+        const clicks = parseInt(row[mappedHeaders.clicks!], 10) || 0;
+        let cpl = parseFloat(String(row[mappedHeaders.cpl!]).replace(',','.')) || 0;
+        let cpc = parseFloat(String(row[mappedHeaders.cpc!]).replace(',','.')) || 0;
 
         if (leads > 0 && investment > 0 && cpl === 0) {
             cpl = investment / leads;
@@ -180,10 +195,10 @@ function parseCSV(csvText: string): AdData[] {
                 id: `${date}-${brand}-${index}`,
                 date,
                 brand,
-                account: row[mappedHeaders.account] || 'N/A',
-                campaignName: row[mappedHeaders.campaignName] || 'N-A',
-                adSetName: row[mappedHeaders.adSetName] || 'N/A',
-                adName: row[mappedHeaders.adName] || 'N/A',
+                account: adAccountName,
+                campaignName: campaignName,
+                adSetName: row[mappedHeaders.adSetName!] || 'N/A',
+                adName: row[mappedHeaders.adName!] || 'N/A',
                 investment,
                 leads,
                 impressions,
@@ -250,11 +265,16 @@ async function fetchAndParseSheetData(): Promise<AdData[]> {
 export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Date, to?: Date } = {}) {
   const sheetData = await fetchAndParseSheetData();
   
+  // If the sheet returns data, we use it as the source of truth.
+  // Otherwise, we stick with what's in memory (from a file upload).
   if (sheetData.length > 0) {
     adDataStore = sheetData;
+  } else if (adDataStore.length > 0) {
+    console.log("Nenhum dado novo encontrado no Google Sheet. Usando dados em memória de um upload anterior.");
   } else {
-    console.log("Nenhum dado novo encontrado no Google Sheet. Usando dados em memória, se disponíveis.");
+    console.log("Nenhuma fonte de dados (Google Sheet ou Upload) disponível.");
   }
+
 
   let filteredData = adDataStore;
 
@@ -266,9 +286,11 @@ export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Da
     const interval = { start: startOfDay(from), end: endOfDay(to) };
     filteredData = filteredData.filter(d => {
         try {
-            // Assuming date format from CSV is 'YYYY-MM-DD' or similar that parse can handle
-            const itemDate = parse(d.date, 'yyyy-MM-dd', new Date());
-            return isWithinInterval(itemDate, interval);
+            // Handles both 'DD/MM/YYYY' and 'YYYY-MM-DD'
+            const parsedDate = d.date.includes('/') 
+                ? parse(d.date, 'dd/MM/yyyy', new Date())
+                : parse(d.date, 'yyyy-MM-dd', new Date());
+            return isWithinInterval(parsedDate, interval);
         } catch {
             return false; // Ignore rows with invalid date formats
         }

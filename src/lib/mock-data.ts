@@ -14,6 +14,6 @@ import { getAdsData as getRealAdsData } from './actions';
  * @returns A promise that resolves to an array of AdData.
  */
 export async function getAdsData({ brand, from, to }: { brand?: Brand; from?: Date; to?: Date } = {}): Promise<AdData[]> {
-  // Always force refetch to get the latest data from the sheet
-  return getRealAdsData({ brand, forceRefetch: true });
+  // Always gets the latest data by re-fetching from the sheet or using uploaded data.
+  return getRealAdsData({ brand, from, to });
 }
