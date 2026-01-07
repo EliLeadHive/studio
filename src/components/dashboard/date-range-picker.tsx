@@ -59,23 +59,25 @@ export function DateRangePicker({
   return (
     <div className="flex flex-col sm:flex-row items-center gap-4 rounded-lg border bg-card text-card-foreground shadow-sm p-4">
         <div className="flex items-center gap-2">
-            <Label htmlFor="date-start" className="font-semibold text-sm">De:</Label>
+            <Label htmlFor="date-start" className="font-semibold text-sm shrink-0">De:</Label>
             <Input 
                 type="date" 
                 id="date-start" 
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
                 className="w-auto"
+                aria-label="Data de início"
             />
         </div>
         <div className="flex items-center gap-2">
-            <Label htmlFor="date-end" className="font-semibold text-sm">Até:</Label>
+            <Label htmlFor="date-end" className="font-semibold text-sm shrink-0">Até:</Label>
             <Input 
                 type="date" 
                 id="date-end" 
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
                 className="w-auto"
+                aria-label="Data de fim"
             />
         </div>
         <div className="flex items-center gap-2">
