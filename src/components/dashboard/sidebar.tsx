@@ -11,9 +11,9 @@ import {
   SidebarGroupLabel,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Car, Link2, MapPin, PieChart, Upload, BarChart3 } from 'lucide-react';
+import { Car, PieChart, Upload, BarChart3, Link2 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { BRANDS } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
@@ -22,12 +22,20 @@ import { ScrollArea } from '../ui/scroll-area';
 
 export function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [lastSync, setLastSync] = useState('Aguardando...');
 
   useEffect(() => {
     // In a real app, this would come from the data source
     setLastSync(format(new Date(), "dd/MM/yy 'às' HH:mm", { locale: ptBR }));
   }, [pathname]);
+
+  const createUrlWithParams = (basePath: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    const paramString = params.toString();
+    return paramString ? `${basePath}?${paramString}` : basePath;
+  };
+
 
   return (
     <SidebarPrimitive collapsible="icon" className="border-r border-sidebar-border">
@@ -54,7 +62,7 @@ export function Sidebar() {
                 isActive={pathname === '/dashboard'}
                 tooltip="Dashboard Executivo"
               >
-                <Link href="/dashboard">
+                <Link href={createUrlWithParams('/dashboard')}>
                   <PieChart />
                   <span>Dashboard Executivo</span>
                 </Link>
@@ -62,7 +70,7 @@ export function Sidebar() {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/monthly-comparison')} tooltip="Comparativo Mensal">
-                <Link href="/dashboard/monthly-comparison">
+                <Link href={createUrlWithParams('/dashboard/monthly-comparison')}>
                   <BarChart3 />
                   <span>Comparativo Mensal</span>
                 </Link>
@@ -82,7 +90,7 @@ export function Sidebar() {
                     isActive={pathname === `/dashboard/${brand.toLowerCase()}`}
                     tooltip={brand}
                   >
-                    <Link href={`/dashboard/${brand.toLowerCase()}`}>
+                    <Link href={createUrlWithParams(`/dashboard/${brand.toLowerCase()}`)}>
                       <Car />
                       <span>{brand}</span>
                     </Link>
@@ -91,19 +99,6 @@ export function Sidebar() {
               ))}
             </SidebarMenu>
           </ScrollArea>
-        </SidebarGroup>
-        <SidebarSeparator />
-        <SidebarGroup>
-            <SidebarMenu>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/upload')} tooltip="Upload de Dados">
-                        <Link href="/dashboard/upload">
-                            <Upload />
-                            <span>Upload de Dados</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="group-data-[collapsible=icon]:p-0">
