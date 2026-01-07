@@ -11,7 +11,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Car, PieChart, Upload, BarChart3, Link2 } from 'lucide-react';
+import { Car, PieChart, BarChart3, Link2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { BRANDS } from '@/lib/types';
@@ -81,7 +81,7 @@ export function Sidebar() {
         <SidebarSeparator />
         <SidebarGroup>
           <SidebarGroupLabel>Marcas</SidebarGroupLabel>
-          <ScrollArea className="h-[calc(100vh-320px)]">
+          <ScrollArea className="h-[calc(100vh-280px)]">
             <SidebarMenu>
               {BRANDS.map((brand) => (
                 <SidebarMenuItem key={brand}>
