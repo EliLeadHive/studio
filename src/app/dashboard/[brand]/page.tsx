@@ -7,11 +7,13 @@ import { DollarSign, Target, Users, MousePointerClick } from 'lucide-react';
 import { LeadsOverTimeChart } from '@/components/dashboard/leads-over-time-chart';
 import { AiSummary } from '@/components/dashboard/ai-summary';
 import { ChartConfig } from '@/components/ui/chart';
+import { parseISO } from 'date-fns';
 
 interface BrandPageProps {
   params: {
     brand: string;
   };
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 // Helper to validate brand
@@ -26,17 +28,20 @@ export async function generateStaticParams() {
   }))
 }
 
-export default async function BrandPage({ params }: BrandPageProps) {
+export default async function BrandPage({ params, searchParams }: BrandPageProps) {
   const brand = getValidBrand(params.brand);
 
   if (!brand) {
     notFound();
   }
 
-  const brandData = await getAdsData({ brand });
+  const from = searchParams?.from ? parseISO(searchParams.from as string) : undefined;
+  const to = searchParams?.to ? parseISO(searchParams.to as string) : undefined;
+
+  const brandData = await getAdsData({ brand, from, to });
 
   if (brandData.length === 0) {
-    return <div className="text-center text-muted-foreground">Nenhum dado encontrado para {brand}.</div>;
+    return <div className="text-center text-muted-foreground">Nenhum dado encontrado para {brand} no período selecionado.</div>;
   }
 
   const totalInvestment = brandData.reduce((sum, item) => sum + item.investment, 0);

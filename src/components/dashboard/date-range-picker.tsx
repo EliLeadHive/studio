@@ -1,10 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { format } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -18,8 +19,45 @@ import {
 export function DateRangePicker({
   className,
 }: React.HTMLAttributes<HTMLDivElement>) {
-  // In a real application, this state would likely be lifted and managed via URL search params
-  const [date, setDate] = React.useState<DateRange | undefined>();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const from = searchParams.get('from');
+  const to = searchParams.get('to');
+  
+  const [date, setDate] = React.useState<DateRange | undefined>(() => {
+    if (from && to) {
+        const fromDate = parseISO(from);
+        const toDate = parseISO(to);
+        if (isValid(fromDate) && isValid(toDate)) {
+            return { from: fromDate, to: toDate };
+        }
+    }
+    return undefined;
+  });
+
+  const handleSelect = (range: DateRange | undefined) => {
+    setDate(range);
+    
+    const current = new URLSearchParams(Array.from(searchParams.entries()));
+    
+    if (range?.from) {
+      current.set('from', format(range.from, 'yyyy-MM-dd'));
+    } else {
+      current.delete('from');
+    }
+
+    if (range?.to) {
+      current.set('to', format(range.to, 'yyyy-MM-dd'));
+    } else {
+      current.delete('to');
+    }
+
+    const search = current.toString();
+    const query = search ? `?${search}` : '';
+    router.push(`${pathname}${query}`);
+  };
 
   return (
     <div className={cn('grid gap-2', className)}>
@@ -37,11 +75,11 @@ export function DateRangePicker({
             {date?.from ? (
               date.to ? (
                 <>
-                  {format(date.from, 'LLL dd, y', { locale: ptBR })} -{' '}
-                  {format(date.to, 'LLL dd, y', { locale: ptBR })}
+                  {format(date.from, 'dd/MM/yyyy')} -{' '}
+                  {format(date.to, 'dd/MM/yyyy')}
                 </>
               ) : (
-                format(date.from, 'LLL dd, y', { locale: ptBR })
+                format(date.from, 'dd/MM/yyyy')
               )
             ) : (
               <span>Selecione um período</span>
@@ -54,7 +92,7 @@ export function DateRangePicker({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={setDate}
+            onSelect={handleSelect}
             numberOfMonths={2}
             locale={ptBR}
           />

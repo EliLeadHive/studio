@@ -7,9 +7,14 @@ import { BrandPerformanceChart } from '@/components/dashboard/brand-performance-
 import { ChartContainer, ChartConfig } from '@/components/ui/chart';
 import { BRANDS } from '@/lib/types';
 import { AiGeneralReport } from '@/components/dashboard/ai-general-report';
+import { parseISO } from 'date-fns';
 
-export default async function DashboardPage() {
-  const data = await getAdsData();
+export default async function DashboardPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
+  
+  const from = searchParams?.from ? parseISO(searchParams.from as string) : undefined;
+  const to = searchParams?.to ? parseISO(searchParams.to as string) : undefined;
+
+  const data = await getAdsData({ from, to });
 
   const totalInvestment = data.reduce((sum, item) => sum + item.investment, 0);
   const totalLeads = data.reduce((sum, item) => sum + item.leads, 0);

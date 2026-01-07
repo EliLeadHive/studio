@@ -7,6 +7,7 @@ import { generateMonthlyObservation } from "@/ai/flows/generate-monthly-observat
 import type { AdData, Brand, MonthlyMetric } from "./types";
 import { BRANDS } from "./types";
 import Papa from 'papaparse';
+import { parse, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 
 // This is a temporary in-memory store. It's populated by the Google Sheet fetch.
 let adDataStore: AdData[] = [];
@@ -136,7 +137,7 @@ function parseCSV(csvText: string): AdData[] {
     // Create a map from our desired keys (e.g., 'campaignName') to the actual header in the file
     const mappedHeaders = Object.keys(columnMapping).reduce((acc, key) => {
         const csvHeader = columnMapping[key];
-        const foundHeader = headers.find(h => h === csvHeader);
+        const foundHeader = headers.find(h => h.toLowerCase() === csvHeader.toLowerCase());
         if (foundHeader) {
             acc[key] = foundHeader;
         } else {
@@ -225,14 +226,13 @@ async function fetchAndParseSheetData(): Promise<AdData[]> {
         return [];
     }
     try {
-        // Use a random query parameter to bypass cache if needed, but revalidate is better
         const response = await fetch(GOOGLE_SHEET_CSV_URL, { 
             next: { revalidate: 300 } // Cache for 5 minutes
         });
 
         if (!response.ok) {
             console.error(`Falha ao buscar dados do Google Sheet: ${response.statusText}`);
-            return []; // Return empty, so we might fall back to store
+            return [];
         }
         const csvText = await response.text();
         if (!csvText) {
@@ -246,22 +246,32 @@ async function fetchAndParseSheetData(): Promise<AdData[]> {
 }
 
 
-export async function getAdsData({ brand }: { brand?: Brand } = {}) {
-  // Always fetch fresh data for this function call.
-  // The fetch itself is cached for 5 minutes via Next.js revalidate mechanism.
+export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Date, to?: Date } = {}) {
   const sheetData = await fetchAndParseSheetData();
   
   if (sheetData.length > 0) {
     adDataStore = sheetData;
   } else {
-    // If fetching fails, we can rely on the last known data in the store as a fallback.
     console.log("Nenhum dado novo encontrado no Google Sheet. Usando dados em memória, se disponíveis.");
   }
 
-  // Always work from the in-memory store after attempting a fetch.
   let filteredData = adDataStore;
+
   if (brand) {
     filteredData = filteredData.filter(d => d.brand === brand);
+  }
+
+  if (from && to) {
+    const interval = { start: startOfDay(from), end: endOfDay(to) };
+    filteredData = filteredData.filter(d => {
+        try {
+            // Assuming date format from CSV is 'YYYY-MM-DD' or similar that parse can handle
+            const itemDate = parse(d.date, 'yyyy-MM-dd', new Date());
+            return isWithinInterval(itemDate, interval);
+        } catch {
+            return false; // Ignore rows with invalid date formats
+        }
+    });
   }
   
   return filteredData;
