@@ -100,21 +100,16 @@ function findBrandInText(text: string): Brand | null {
   if (!text) return null;
   const lowerCaseText = text.toLowerCase();
   for (const brand of BRANDS) {
+    // Ensure comparison is case-insensitive for the brand name as well
     if (lowerCaseText.includes(brand.toLowerCase())) {
       return brand;
     }
-  }
-  // Fallback for Omoda/Jaecoo if they are in the same account
-  if (lowerCaseText.includes('omoda') || lowerCaseText.includes('jaecoo')) {
-      if (lowerCaseText.includes('omoda')) return 'Omoda';
-      if (lowerCaseText.includes('jaecoo')) return 'Jaecoo';
   }
   return null;
 }
 
 function parseCSV(csvText: string): AdData[] {
-    // Trim trailing newline if it exists to avoid PapaParse creating an extra empty row
-    const cleanCsvText = csvText.trimEnd();
+    const cleanCsvText = csvText.trim();
     const parseResult = Papa.parse<any>(cleanCsvText, { header: true, skipEmptyLines: true });
     const data: AdData[] = [];
     
