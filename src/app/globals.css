@@ -85,4 +85,9 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Style for date input to make the calendar icon white */
+  input[type="date"] {
+    color-scheme: dark;
+  }
 }
