@@ -63,34 +63,34 @@ export function DateRangePicker({
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-center gap-2 rounded-lg border bg-card text-card-foreground shadow-sm p-2">
+    <div className="flex flex-col sm:flex-row items-center gap-2 rounded-lg border bg-card text-card-foreground shadow-sm p-1.5">
         <div className="flex items-center gap-1.5">
-            <Label htmlFor="date-start" className="font-semibold text-xs shrink-0">De:</Label>
+            <Label htmlFor="date-start" className="font-semibold text-xs shrink-0 px-1">De:</Label>
             <Input 
                 type="date" 
                 id="date-start" 
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-auto h-8 text-xs"
+                className="w-auto h-7 text-xs"
                 aria-label="Data de início"
             />
         </div>
         <div className="flex items-center gap-1.5">
-            <Label htmlFor="date-end" className="font-semibold text-xs shrink-0">Até:</Label>
+            <Label htmlFor="date-end" className="font-semibold text-xs shrink-0 px-1">Até:</Label>
             <Input 
                 type="date" 
                 id="date-end" 
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-auto h-8 text-xs"
+                className="w-auto h-7 text-xs"
                 aria-label="Data de fim"
             />
         </div>
         <div className="flex items-center gap-1">
-            <Button onClick={handleApply} size="sm" className="h-8">
+            <Button onClick={handleApply} size="sm" className="h-7 px-2.5">
                 Atualizar
             </Button>
-            <Button onClick={handleClear} variant="ghost" size="sm" className="h-8">
+            <Button onClick={handleClear} variant="ghost" size="sm" className="h-7 px-2.5">
                 Limpar
             </Button>
         </div>
