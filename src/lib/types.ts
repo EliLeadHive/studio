@@ -3,7 +3,7 @@ export const BRANDS = [
   "Jeep", 
   "Ram", 
   "Peugeot", 
-  "Citroën", 
+  "Citroen", 
   "Nissan",
   "Honda",
   "Asti",
