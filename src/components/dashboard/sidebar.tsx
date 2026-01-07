@@ -11,7 +11,7 @@ import {
   SidebarGroupLabel,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Car, PieChart, BarChart3, Link2 } from 'lucide-react';
+import { Car, PieChart, BarChart3, Link2, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { BRANDS } from '@/lib/types';
@@ -26,7 +26,7 @@ export function Sidebar() {
   const [lastSync, setLastSync] = useState('Aguardando...');
 
   useEffect(() => {
-    // In a real app, this would come from the data source
+    // This value is client-side only to prevent hydration mismatch.
     setLastSync(format(new Date(), "dd/MM/yy 'às' HH:mm", { locale: ptBR }));
   }, [pathname]);
 
@@ -76,12 +76,24 @@ export function Sidebar() {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/dashboard/upload'}
+                tooltip="Upload de Dados"
+              >
+                <Link href={createUrlWithParams('/dashboard/upload')}>
+                  <Upload />
+                  <span>Upload de Dados</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
         <SidebarSeparator />
         <SidebarGroup>
           <SidebarGroupLabel>Marcas</SidebarGroupLabel>
-          <ScrollArea className="h-[calc(100vh-280px)]">
+          <ScrollArea className="h-[calc(100vh-320px)]">
             <SidebarMenu>
               {BRANDS.map((brand) => (
                 <SidebarMenuItem key={brand}>
@@ -108,7 +120,7 @@ export function Sidebar() {
             </div>
             <div className="group-data-[collapsible=icon]:hidden">
                 <p className="text-xs font-bold text-foreground">Fonte de Dados</p>
-                <p className="text-[10px] text-muted-foreground" id="last-sync">{`Sincronizado: ${lastSync}`}</p>
+                <p className="text-[10px] text-muted-foreground" id="last-sync">{lastSync === 'Aguardando...' ? lastSync : `Sincronizado: ${lastSync}`}</p>
             </div>
         </div>
       </SidebarFooter>
