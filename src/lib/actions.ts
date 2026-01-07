@@ -110,6 +110,9 @@ function findBrandInText(text: string): Brand | null {
 
 function parseCSV(csvText: string): AdData[] {
     const cleanCsvText = csvText.trim();
+    if (!cleanCsvText) {
+        return [];
+    }
     const parseResult = Papa.parse<any>(cleanCsvText, { header: true, skipEmptyLines: true, trimHeaders: true });
     const data: AdData[] = [];
     
@@ -117,53 +120,39 @@ function parseCSV(csvText: string): AdData[] {
         console.warn("Erros de parsing encontrados no CSV:", parseResult.errors);
     }
 
+    // Exact headers from the user's screenshot, with pt-BR fallbacks.
     const columnMapping: Record<string, string[]> = {
-        'date': ['data'],
-        'account': ['lojas', 'account'],
-        'campaignName': ['nome da campanha', 'campaign name'],
-        'adSetName': ['nome do conjunto de anúncios', 'ad set name'],
-        'adName': ['nome do anúncio', 'ad name'],
-        'investment': ['investimento', 'amount spent (brl)'],
-        'leads': ['leads'],
-        'impressions': ['impressões', 'impressions'],
-        'clicks': ['cliques', 'clicks (all)'],
-        'cpl': ['custo por lead', 'cost per lead (brl)'],
-        'cpc': ['cpc', 'cpc (all)'],
+        date: ['reporting starts', 'data'],
+        account: ['account', 'lojas'],
+        campaignName: ['campaign name', 'nome da campanha'],
+        adSetName: ['ad set name', 'nome do conjunto de anúncios'],
+        adName: ['ad name', 'nome do anúncio'],
+        investment: ['amount spent (brl)', 'investimento', 'valor gasto (brl)'],
+        leads: ['leads', 'resultados'],
+        impressions: ['impressions', 'impressões'],
+        clicks: ['clicks (all)', 'cliques (todos)'],
+        cpl: ['cost per lead (brl)', 'custo por lead'],
+        cpc: ['cpc (all)', 'cpc'],
     };
     
-    const headers = parseResult.meta.fields?.map(h => h.toLowerCase()) || [];
+    const originalHeaders = parseResult.meta.fields || [];
+    const lowerCaseHeaders = originalHeaders.map(h => h.toLowerCase());
     
     const mappedHeaders: Record<string, string | undefined> = {};
     for (const key in columnMapping) {
         const possibleHeaders = columnMapping[key];
-        const foundHeader = headers.find(h => possibleHeaders.includes(h));
+        const foundHeader = lowerCaseHeaders.find(h => possibleHeaders.includes(h));
+        
         if (foundHeader) {
-            mappedHeaders[key] = parseResult.meta.fields?.find(h => h.toLowerCase() === foundHeader);
+            // Find the original header with the correct capitalization
+            mappedHeaders[key] = originalHeaders.find(origHeader => origHeader.toLowerCase() === foundHeader);
         } else {
-             // Fallback for some of the original english headers, just in case
-            const fallbackMap: Record<string,string> = {
-                'date': 'Reporting starts',
-                'campaignName': 'Campaign name',
-                'investment': 'Amount spent (BRL)',
-                'impressions': 'Impressions',
-                'clicks': 'Clicks (all)',
-                'cpl': 'Cost per lead (BRL)',
-            }
-            if(fallbackMap[key]) {
-                 const foundFallbackHeader = headers.find(h => h.toLowerCase() === fallbackMap[key].toLowerCase());
-                 if(foundFallbackHeader) {
-                    mappedHeaders[key] = parseResult.meta.fields?.find(h => h.toLowerCase() === foundFallbackHeader);
-                 } else {
-                    console.warn(`Coluna esperada não encontrada no CSV para a chave '${key}'. Tentativas: ${possibleHeaders.join(', ')}`);
-                 }
-            } else {
-                console.warn(`Coluna esperada não encontrada no CSV para a chave '${key}'. Tentativas: ${possibleHeaders.join(', ')}`);
-            }
+             console.warn(`Coluna esperada não encontrada no CSV para a chave '${key}'. Tentativas: ${possibleHeaders.join(', ')}`);
         }
     }
-
+    
     if (!mappedHeaders.campaignName && !mappedHeaders.account) {
-        console.error('Nenhuma coluna de identificação ("Nome da Campanha" ou "Lojas") foi encontrada.');
+        console.error('Nenhuma coluna de identificação ("Campaign name" ou "Account") foi encontrada.');
         return [];
     }
 
@@ -174,8 +163,13 @@ function parseCSV(csvText: string): AdData[] {
         const brand = findBrandInText(campaignName) || findBrandInText(adAccountName);
 
         if (!brand) continue;
+        
+        const dateHeader = mappedHeaders.date!;
+        const dateValue = row[dateHeader];
+        // Handle YYYY-MM-DD that PapaParse might convert to a Date object
+        const date = dateValue instanceof Date ? dateValue.toISOString().split('T')[0] : dateValue;
 
-        const date = row[mappedHeaders.date!];
+
         const investment = parseFloat(String(row[mappedHeaders.investment!]).replace(',','.')) || 0;
         const leads = parseInt(row[mappedHeaders.leads!], 10) || 0;
         const impressions = parseInt(row[mappedHeaders.impressions!], 10) || 0;
