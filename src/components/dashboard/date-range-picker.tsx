@@ -27,7 +27,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Skeleton } from '../ui/skeleton';
 
 
 const PRESET_OPTIONS = {
@@ -43,25 +42,6 @@ const PRESET_OPTIONS = {
     custom: 'Personalizado'
 }
 
-function DateRangePickerSkeleton() {
-    return (
-        <div className="flex flex-col sm:flex-row items-center gap-2 rounded-lg border bg-card text-card-foreground shadow-sm p-1.5">
-            <div className="flex items-center gap-2">
-                 <Skeleton className="h-7 w-[130px]" />
-                 <Skeleton className="h-4 w-5" />
-                 <Skeleton className="h-7 w-32" />
-                 <Skeleton className="h-4 w-5" />
-                 <Skeleton className="h-7 w-32" />
-            </div>
-            <div className="flex items-center gap-1">
-                <Skeleton className="h-7 w-[75px]" />
-                <Skeleton className="h-7 w-[60px]" />
-            </div>
-        </div>
-    )
-}
-
-
 export function DateRangePicker({
   className,
 }: React.HTMLAttributes<HTMLDivElement>) {
@@ -72,10 +52,8 @@ export function DateRangePicker({
   const [dateFrom, setDateFrom] = React.useState('');
   const [dateTo, setDateTo] = React.useState('');
   const [preset, setPreset] = React.useState('custom');
-  const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
-    setIsClient(true);
     const fromParam = searchParams.get('from');
     const toParam = searchParams.get('to');
     if (fromParam) {
@@ -178,10 +156,6 @@ export function DateRangePicker({
     setDateTo('');
     setPreset('custom');
     applyDateChange('', '');
-  }
-
-  if (!isClient) {
-    return <DateRangePickerSkeleton />;
   }
 
   return (

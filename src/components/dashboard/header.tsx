@@ -3,11 +3,32 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DateRangePicker } from './date-range-picker';
 import { BRANDS } from '@/lib/types';
 import { SidebarTrigger } from '../ui/sidebar';
 import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import dynamic from 'next/dynamic';
+import { Skeleton } from '../ui/skeleton';
+
+const DateRangePicker = dynamic(() => import('./date-range-picker').then(mod => mod.DateRangePicker), {
+  ssr: false,
+  loading: () => (
+     <div className="flex flex-col sm:flex-row items-center gap-2 rounded-lg border bg-card text-card-foreground shadow-sm p-1.5">
+        <div className="flex items-center gap-2">
+            <Skeleton className="h-7 w-[130px]" />
+            <Skeleton className="h-4 w-5" />
+            <Skeleton className="h-7 w-32" />
+            <Skeleton className="h-4 w-5" />
+            <Skeleton className="h-7 w-32" />
+        </div>
+        <div className="flex items-center gap-1">
+            <Skeleton className="h-7 w-[75px]" />
+            <Skeleton className="h-7 w-[60px]" />
+        </div>
+    </div>
+  ),
+});
+
 
 function getTitle(pathname: string): string {
   if (pathname === '/dashboard') {
@@ -15,6 +36,9 @@ function getTitle(pathname: string): string {
   }
   if (pathname.includes('/monthly-comparison')) {
     return 'Comparativo Mensal';
+  }
+  if (pathname.includes('/upload')) {
+    return 'Upload de Dados';
   }
   const brandPath = pathname.split('/')[2];
   if (brandPath) {
