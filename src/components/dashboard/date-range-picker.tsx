@@ -1,9 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { format, parseISO, isValid } from 'date-fns';
+import { addDays, addMonths, endOfMonth, format, startOfMonth, subDays, subMonths, parseISO, isValid, startOfWeek, endOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, X } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
@@ -16,6 +16,21 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Separator } from '../ui/separator';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Label } from '../ui/label';
+
+const PRESETS = [
+    { value: 'today', label: 'Hoje', range: { from: new Date(), to: new Date() } },
+    { value: 'yesterday', label: 'Ontem', range: { from: subDays(new Date(), 1), to: subDays(new Date(), 1) } },
+    { value: 'last7', label: 'Últimos 7 dias', range: { from: subDays(new Date(), 6), to: new Date() } },
+    { value: 'last14', label: 'Últimos 14 dias', range: { from: subDays(new Date(), 13), to: new Date() } },
+    { value: 'last30', label: 'Últimos 30 dias', range: { from: subDays(new Date(), 29), to: new Date() } },
+    { value: 'thisWeek', label: 'Esta semana', range: { from: startOfWeek(new Date(), { locale: ptBR }), to: endOfWeek(new Date(), { locale: ptBR }) } },
+    { value: 'thisMonth', label: 'Este mês', range: { from: startOfMonth(new Date()), to: endOfMonth(new Date()) } },
+    { value: 'lastMonth', label: 'Mês passado', range: { from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) } },
+    { value: 'all', label: 'Máximo', range: { from: undefined, to: undefined } },
+] as const;
+
 
 export function DateRangePicker({
   className,
@@ -27,8 +42,7 @@ export function DateRangePicker({
 
   const appliedFrom = searchParams.get('from');
   const appliedTo = searchParams.get('to');
-
-  // State for the currently applied date range, derived from URL
+  
   const appliedDate = React.useMemo<DateRange | undefined>(() => {
     if (appliedFrom && appliedTo) {
       const fromDate = parseISO(appliedFrom);
@@ -39,16 +53,42 @@ export function DateRangePicker({
     }
     return undefined;
   }, [appliedFrom, appliedTo]);
-
-  // State for the date range being selected inside the popover
+  
   const [selectedDate, setSelectedDate] = React.useState<DateRange | undefined>(appliedDate);
+  const [selectedPreset, setSelectedPreset] = React.useState<string | undefined>(() => {
+      if (!appliedDate) return 'all';
+      for (const preset of PRESETS) {
+          if (preset.range.from && appliedDate.from && format(preset.range.from, 'yyyy-MM-dd') === format(appliedDate.from, 'yyyy-MM-dd') &&
+              preset.range.to && appliedDate.to && format(preset.range.to, 'yyyy-MM-dd') === format(appliedDate.to, 'yyyy-MM-dd')) {
+              return preset.value;
+          }
+      }
+      return 'custom';
+  });
 
-  // When the popover opens, sync the selected date with the applied one
+
   React.useEffect(() => {
     if (popoverOpen) {
       setSelectedDate(appliedDate);
     }
   }, [popoverOpen, appliedDate]);
+  
+  const handlePresetChange = (value: string) => {
+    setSelectedPreset(value);
+    if (value === 'custom') {
+      return;
+    }
+    const preset = PRESETS.find(p => p.value === value);
+    if (preset) {
+        setSelectedDate(preset.range);
+    }
+  };
+
+  const handleDateChange = (range: DateRange | undefined) => {
+    setSelectedDate(range);
+    // If user interacts with calendar, it's a custom range
+    setSelectedPreset('custom');
+  }
 
   const handleApply = () => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
@@ -76,15 +116,8 @@ export function DateRangePicker({
     setPopoverOpen(false);
   };
   
-  const handleClear = () => {
-    setSelectedDate(undefined);
-    const current = new URLSearchParams(Array.from(searchParams.entries()));
-    current.delete('from');
-    current.delete('to');
-    const search = current.toString();
-    const query = search ? `?${search}` : '';
-    router.push(`${pathname}${query}`);
-    setPopoverOpen(false);
+  const handleCancel = () => {
+      setPopoverOpen(false);
   }
 
   return (
@@ -110,33 +143,54 @@ export function DateRangePicker({
                 format(appliedDate.from, 'dd/MM/yyyy')
               )
             ) : (
-              <span>Selecione um período</span>
+              <span>Máximo</span>
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="end">
-          <Calendar
-            initialFocus
-            mode="range"
-            defaultMonth={selectedDate?.from}
-            selected={selectedDate}
-            onSelect={setSelectedDate}
-            numberOfMonths={2}
-            locale={ptBR}
-          />
-          <Separator />
-          <div className="flex items-center justify-end gap-2 p-3">
-            <Button
-              variant="ghost"
-              onClick={handleClear}
-              disabled={!appliedDate}
-            >
-              Limpar
-            </Button>
-            <Button onClick={handleApply} disabled={!selectedDate?.from}>
-              Aplicar
-            </Button>
-          </div>
+        <PopoverContent className="w-auto p-0 flex" align="end">
+            <div className="flex-col space-y-2 p-4 border-r border-border">
+                <p className="text-sm font-medium text-foreground">Usados recentemente</p>
+                <RadioGroup 
+                    value={selectedPreset} 
+                    onValueChange={handlePresetChange}
+                    className="space-y-1"
+                >
+                    {PRESETS.map((preset) => (
+                         <div key={preset.value} className="flex items-center space-x-2">
+                             <RadioGroupItem value={preset.value} id={`preset-${preset.value}`} />
+                             <Label htmlFor={`preset-${preset.value}`} className="font-normal cursor-pointer">{preset.label}</Label>
+                         </div>
+                    ))}
+                    <div className="flex items-center space-x-2 pt-2">
+                        <RadioGroupItem value="custom" id="preset-custom" />
+                        <Label htmlFor="preset-custom" className="font-normal cursor-pointer">Personalizado</Label>
+                    </div>
+                </RadioGroup>
+            </div>
+            <div className="flex flex-col">
+                <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={selectedDate?.from}
+                    selected={selectedDate}
+                    onSelect={handleDateChange}
+                    numberOfMonths={2}
+                    locale={ptBR}
+                    className="p-3"
+                />
+                <Separator />
+                <div className="flex items-center justify-end gap-2 p-3">
+                    <Button
+                    variant="ghost"
+                    onClick={handleCancel}
+                    >
+                    Cancelar
+                    </Button>
+                    <Button onClick={handleApply}>
+                    Atualizar
+                    </Button>
+                </div>
+            </div>
         </PopoverContent>
       </Popover>
     </div>
