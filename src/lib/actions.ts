@@ -113,8 +113,14 @@ function findBrandInText(text: string): Brand | null {
 }
 
 function parseCSV(csvText: string): AdData[] {
-    const parseResult = Papa.parse<any>(csvText, { header: true, skipEmptyLines: true });
+    // Trim trailing newline if it exists to avoid PapaParse creating an extra empty row
+    const cleanCsvText = csvText.trimEnd();
+    const parseResult = Papa.parse<any>(cleanCsvText, { header: true, skipEmptyLines: true });
     const data: AdData[] = [];
+    
+    if (parseResult.errors.length > 0) {
+        console.warn("Erros de parsing encontrados no CSV:", parseResult.errors);
+    }
 
     // Corrected column mapping to match the CSV headers exactly
     const columnMapping: Record<string, string> = {
