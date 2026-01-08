@@ -122,30 +122,28 @@ function parseCSV(csvText: string): AdData[] {
 
     // Exact headers from the user's screenshot, with pt-BR fallbacks.
     const columnMapping: Record<string, string[]> = {
-        date: ['reporting starts', 'data'],
-        account: ['account', 'lojas'],
+        date: ['reporting starts', 'data', 'início da veiculação'],
+        account: ['account', 'lojas', 'nome da conta'],
         campaignName: ['campaign name', 'nome da campanha'],
         adSetName: ['ad set name', 'nome do conjunto de anúncios'],
         adName: ['ad name', 'nome do anúncio'],
         investment: ['amount spent (brl)', 'investimento', 'valor gasto (brl)'],
-        leads: ['leads', 'resultados'],
+        leads: ['leads', 'resultados', 'cadastros'],
         impressions: ['impressions', 'impressões'],
         clicks: ['clicks (all)', 'cliques (todos)'],
-        cpl: ['cost per lead (brl)', 'custo por lead'],
-        cpc: ['cpc (all)', 'cpc'],
+        cpl: ['cost per lead (brl)', 'custo por lead', 'custo por resultado', 'custo por cadastro'],
+        cpc: ['cpc (all)', 'cpc (todos)', 'cpc (custo por clique no link)'],
     };
     
     const originalHeaders = parseResult.meta.fields || [];
-    const lowerCaseHeaders = originalHeaders.map(h => h.toLowerCase());
     
     const mappedHeaders: Record<string, string | undefined> = {};
     for (const key in columnMapping) {
         const possibleHeaders = columnMapping[key];
-        const foundHeader = lowerCaseHeaders.find(h => possibleHeaders.includes(h));
+        const foundHeader = originalHeaders.find(origHeader => possibleHeaders.includes(origHeader.toLowerCase()));
         
         if (foundHeader) {
-            // Find the original header with the correct capitalization
-            mappedHeaders[key] = originalHeaders.find(origHeader => origHeader.toLowerCase() === foundHeader);
+            mappedHeaders[key] = foundHeader;
         } else {
              console.warn(`Coluna esperada não encontrada no CSV para a chave '${key}'. Tentativas: ${possibleHeaders.join(', ')}`);
         }
@@ -157,6 +155,7 @@ function parseCSV(csvText: string): AdData[] {
     }
 
     for (const [index, row] of parseResult.data.entries()) {
+      try {
         const campaignName = row[mappedHeaders.campaignName!] || '';
         const adAccountName = row[mappedHeaders.account!] || '';
 
@@ -166,16 +165,20 @@ function parseCSV(csvText: string): AdData[] {
         
         const dateHeader = mappedHeaders.date!;
         const dateValue = row[dateHeader];
-        // Handle YYYY-MM-DD that PapaParse might convert to a Date object
-        const date = dateValue instanceof Date ? dateValue.toISOString().split('T')[0] : dateValue;
+        // Handle YYYY-MM-DD or DD/MM/YYYY
+        const date = dateValue.includes('/') 
+            ? parse(dateValue, 'dd/MM/yyyy', new Date()).toISOString().split('T')[0]
+            : parse(dateValue, 'yyyy-MM-dd', new Date()).toISOString().split('T')[0];
 
+        const safeParseFloat = (val: string) => parseFloat(String(val || '0').replace(',', '.'));
+        const safeParseInt = (val: string) => parseInt(String(val || '0'), 10);
 
-        const investment = parseFloat(String(row[mappedHeaders.investment!]).replace(',','.')) || 0;
-        const leads = parseInt(row[mappedHeaders.leads!], 10) || 0;
-        const impressions = parseInt(row[mappedHeaders.impressions!], 10) || 0;
-        const clicks = parseInt(row[mappedHeaders.clicks!], 10) || 0;
-        let cpl = parseFloat(String(row[mappedHeaders.cpl!]).replace(',','.')) || 0;
-        let cpc = parseFloat(String(row[mappedHeaders.cpc!]).replace(',','.')) || 0;
+        const investment = safeParseFloat(row[mappedHeaders.investment!]);
+        const leads = safeParseInt(row[mappedHeaders.leads!]);
+        const impressions = safeParseInt(row[mappedHeaders.impressions!]);
+        const clicks = safeParseInt(row[mappedHeaders.clicks!]);
+        let cpl = safeParseFloat(row[mappedHeaders.cpl!]);
+        let cpc = safeParseFloat(row[mappedHeaders.cpc!]);
 
         if (leads > 0 && investment > 0 && cpl === 0) {
             cpl = investment / leads;
@@ -201,6 +204,9 @@ function parseCSV(csvText: string): AdData[] {
                 cpc,
             });
         }
+      } catch (e) {
+          console.error(`Falha ao processar a linha ${index + 2} do CSV.`, { row, error: e });
+      }
     }
 
     return data;
