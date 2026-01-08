@@ -113,14 +113,21 @@ function parseCSV(csvText: string): AdData[] {
     if (!cleanCsvText) {
         return [];
     }
-    const parseResult = Papa.parse<any>(cleanCsvText, { header: true, skipEmptyLines: true, trimHeaders: true });
+    const parseResult = Papa.parse<any>(cleanCsvText, { header: true, skipEmptyLines: false, trimHeaders: true, dynamicTyping: false });
     const data: AdData[] = [];
     
     if (parseResult.errors.length > 0) {
         console.warn("Erros de parsing encontrados no CSV:", parseResult.errors);
     }
 
-    // Exact headers from the user's screenshot, with pt-BR fallbacks.
+    if (parseResult.data.length === 0) return [];
+    
+    const lastRowIsEmpty = Object.values(parseResult.data[parseResult.data.length - 1]).every(val => val === '' || val === null);
+    if(lastRowIsEmpty) {
+        parseResult.data.pop();
+    }
+
+
     const columnMapping: Record<string, string[]> = {
         date: ['reporting starts', 'data', 'início da veiculação'],
         account: ['account', 'lojas', 'nome da conta'],
@@ -165,7 +172,8 @@ function parseCSV(csvText: string): AdData[] {
         
         const dateHeader = mappedHeaders.date!;
         const dateValue = row[dateHeader];
-        // Handle YYYY-MM-DD or DD/MM/YYYY
+        if(!dateValue) continue;
+
         const date = dateValue.includes('/') 
             ? parse(dateValue, 'dd/MM/yyyy', new Date()).toISOString().split('T')[0]
             : parse(dateValue, 'yyyy-MM-dd', new Date()).toISOString().split('T')[0];
@@ -286,7 +294,6 @@ export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Da
     const interval = { start: startOfDay(from), end: endOfDay(to) };
     filteredData = filteredData.filter(d => {
         try {
-            // Handles both 'DD/MM/YYYY' and 'YYYY-MM-DD'
             const parsedDate = d.date.includes('/') 
                 ? parse(d.date, 'dd/MM/yyyy', new Date())
                 : parse(d.date, 'yyyy-MM-dd', new Date());
