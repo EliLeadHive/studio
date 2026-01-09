@@ -17,12 +17,12 @@ let adDataStore: AdData[] = [];
 const GOOGLE_SHEET_ID = '1dEylYB_N8F51bdVosMV5rjvAPW1tNud1KvSbDeyxrZQ';
 const GOOGLE_SHEET_BASE_URL = `https://docs.google.com/spreadsheets/d/e/${GOOGLE_SHEET_ID}/pub?output=csv`;
 
-// Map Brand names from types.ts to the actual sheet names if they differ.
-// This is now the source of truth for sheet names.
+// Map Brand names from types.ts to the actual sheet names.
+// This is the source of truth for sheet names.
 const BRAND_TO_SHEET_NAME_MAP: Record<Brand, string> = {
     "Fiat": "Fiat Sinal",
     "Jeep": "Jeep Sinal",
-    "Ram": "Ram",
+    "Ram": "Ram", // Assuming this is correct, as it was not in the image.
     "Peugeot": "PSA", 
     "Citroen": "PSA",
     "Nissan": "Nissan Sinal Japan",
@@ -236,9 +236,7 @@ async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
         console.warn(`Nenhum nome de aba mapeado para a marca: ${brand}`);
         return [];
     }
-    // For brands that share a sheet, we fetch it once and filter later.
-    // This avoids fetching the same sheet multiple times.
-    // The logic in fetchAllSheetData will handle this.
+    
     const url = `${GOOGLE_SHEET_BASE_URL}&sheet=${encodeURIComponent(sheetName)}`;
 
     try {
@@ -262,19 +260,9 @@ async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
 }
 
 async function fetchAllSheetData(): Promise<AdData[]> {
-    // Create a map to handle sheets shared by multiple brands (like PSA)
-    const sheetFetchPromises = new Map<string, Promise<AdData[]>>();
-
-    for (const brand of BRANDS) {
-        const sheetName = BRAND_TO_SHEET_NAME_MAP[brand];
-        if (sheetName && !sheetFetchPromises.has(sheetName)) {
-            // If we haven't started fetching this sheet yet, do it now.
-            // The parsing will assign the primary brand, we'll filter later.
-            sheetFetchPromises.set(sheetName, fetchSheetDataForBrand(brand));
-        }
-    }
+    const fetchPromises = BRANDS.map(brand => fetchSheetDataForBrand(brand));
     
-    const results = await Promise.all(sheetFetchPromises.values());
+    const results = await Promise.all(fetchPromises);
     let allData = results.flat();
 
     // Post-processing for shared sheets like PSA
@@ -282,7 +270,7 @@ async function fetchAllSheetData(): Promise<AdData[]> {
     const otherData = allData.filter(d => d.brand !== 'PSA' && d.brand !== 'Peugeot' && d.brand !== 'Citroen');
     
     const processedPsaData = psaData.map(row => {
-        const campaignLower = row.campaignName.toLowerCase();
+        const campaignLower = (row.campaignName || '').toLowerCase();
         if (campaignLower.includes('peugeot')) return {...row, brand: 'Peugeot' as Brand};
         if (campaignLower.includes('citroen')) return {...row, brand: 'Citroen' as Brand};
         // Default to PSA if neither is found, or keep original if it was already correct
