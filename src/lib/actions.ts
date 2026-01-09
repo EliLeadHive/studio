@@ -18,7 +18,6 @@ const GOOGLE_SHEET_ID = '1dEylYB_N8F51bdVosMV5rjvAPW1tNud1KvSbDeyxrZQ';
 const GOOGLE_SHEET_BASE_URL = `https://docs.google.com/spreadsheets/d/e/${GOOGLE_SHEET_ID}/pub?output=csv`;
 
 // Map Brand names from types.ts to the actual sheet names.
-// This is the source of truth for sheet names based on user's script.
 const BRAND_TO_SHEET_NAME_MAP: Partial<Record<Brand, string>> = {
     "Fiat": "Fiat Sinal",
     "Jeep": "Jeep Sinal",
@@ -35,7 +34,8 @@ const BRAND_TO_SHEET_NAME_MAP: Partial<Record<Brand, string>> = {
     "Neta": "Neta Sinal",
     "Omoda": "Omoda Jaecoo",
     "Jaecoo": "Omoda Jaecoo",
-    "Renault": "Renault Sinal France"
+    "Renault": "Renault Sinal France",
+    "PSA": "PSA",
 };
 
 
@@ -240,8 +240,7 @@ async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
         const response = await fetch(url, { next: { revalidate: 300 } }); // 5 min cache
         if (!response.ok) {
             if (response.status === 404) { // Explicitly check for Not Found
-                 // Silently fail if sheet is not found, as it might be expected for some brands.
-                 console.log(`Aba da planilha não encontrada para a marca: ${brand} (Aba: ${sheetName})`);
+                 console.warn(`Aba da planilha não encontrada para a marca: ${brand} (Aba: ${sheetName})`);
             } else {
                  console.error(`Falha ao buscar dados para ${brand}: ${response.statusText}`);
             }
