@@ -15,7 +15,7 @@ const AD_ACCOUNTS = [
   { name: 'GS Institucional', id: 'act_677083568024951' },
   { name: 'Hyundai Sinal', id: 'act_477621751150197' },
   { name: 'Jeep Sinal', id: 'act_145753934178360' },
-  { name: 'Kia Sinal', id: 'act_697260662237200' },
+  { name 'Kia Sinal', id: 'act_697260662237200' },
   { name: 'Leap Sinal', id: 'act_620172050851965' },
   { name: 'Neta Sinal', id: 'act_408446101855529' },
   { name: 'Nissan Sinal Japan', id: 'act_540136228006853' },
@@ -28,22 +28,63 @@ const AD_ACCOUNTS = [
  * Função principal que será executada pelo acionador (trigger).
  */
 function fetchMetaAdsData() {
-  const allDataByBrand = {};
+  let existingData = {};
+  const files = DriveApp.getFilesByName(OUTPUT_FILENAME);
+  
+  if (files.hasNext()) {
+    const file = files.next();
+    try {
+      existingData = JSON.parse(file.getBlob().getDataAsString());
+      Logger.log(`Arquivo existente "${OUTPUT_FILENAME}" encontrado e lido.`);
+    } catch(e) {
+      Logger.log(`Arquivo existente "${OUTPUT_FILENAME}" está corrompido ou vazio. Uma carga completa será realizada.`);
+      existingData = {};
+    }
+  } else {
+    Logger.log(`Nenhum arquivo "${OUTPUT_FILENAME}" encontrado. Uma carga completa será realizada.`);
+  }
+  
+  // Decide se fará a carga completa (730 dias) ou apenas a atualização (1 dia)
+  const daysToFetch = Object.keys(existingData).length > 0 ? 1 : 730;
+  Logger.log(`Iniciando busca de dados para os últimos ${daysToFetch} dia(s).`);
 
+  const newDataByBrand = {};
   for (const account of AD_ACCOUNTS) {
-    Utilities.sleep(1000); // Pausa para não sobrecarregar a API
-    const insights = getInsightsForAccount(account.id, account.name);
+    Utilities.sleep(1000); 
+    const insights = getInsightsForAccount(account.id, account.name, daysToFetch);
     if (insights && insights.length > 0) {
-      allDataByBrand[account.name] = insights;
-    } else {
-      Logger.log(`Nenhum dado encontrado para a conta ${account.name}.`);
+      newDataByBrand[account.name] = insights;
     }
   }
 
-  if (Object.keys(allDataByBrand).length > 0) {
-    saveJsonToDrive(allDataByBrand);
+  if (Object.keys(newDataByBrand).length === 0) {
+    Logger.log('Nenhum dado novo foi retornado pela API da Meta. O arquivo não será alterado.');
+    return;
+  }
+
+  // Se for uma atualização de 1 dia, mescla os dados
+  if (daysToFetch === 1) {
+    Logger.log('Mesclando dados novos com os dados existentes.');
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterday_string = `${yesterday.getFullYear()}-${('0' + (yesterday.getMonth() + 1)).slice(-2)}-${('0' + yesterday.getDate()).slice(-2)}`;
+
+    for(const brand in newDataByBrand) {
+      if (existingData[brand]) {
+        // Remove os dados do dia anterior do set de dados existente para evitar duplicatas
+        const filteredOldData = existingData[brand].filter(row => row['Reporting starts'] !== yesterday_string);
+        // Combina os dados antigos (filtrados) com os novos dados
+        existingData[brand] = filteredOldData.concat(newDataByBrand[brand]);
+      } else {
+        // Se a marca for nova, apenas adiciona
+        existingData[brand] = newDataByBrand[brand];
+      }
+    }
+    saveJsonToDrive(existingData);
   } else {
-    Logger.log('Nenhum dado foi retornado pela API da Meta após processar todas as contas.');
+    // Se for uma carga completa, simplesmente salva os novos dados
+    Logger.log('Salvando dados da carga completa.');
+    saveJsonToDrive(newDataByBrand);
   }
 }
 
@@ -51,22 +92,20 @@ function fetchMetaAdsData() {
 /**
  * Busca os insights de uma única conta de anúncio.
  */
-function getInsightsForAccount(adAccountId, accountName) {
+function getInsightsForAccount(adAccountId, accountName, daysToFetch) {
   const fields = 'campaign_name,adset_name,ad_name,spend,impressions,clicks,cpc,actions,cost_per_action_type';
   const allInsights = [];
   const today = new Date();
   
-  for (let i = 0; i < 730; i++) { // ALTERADO DE 30 para 730 DIAS
+  for (let i = 0; i < daysToFetch; i++) {
     const targetDate = new Date();
     targetDate.setDate(today.getDate() - i);
     
-    // --- CORREÇÃO APLICADA AQUI ---
     const year = targetDate.getFullYear();
     const month = ('0' + (targetDate.getMonth() + 1)).slice(-2);
     const day = ('0' + targetDate.getDate()).slice(-2);
     const date_string = `${year}-${month}-${day}`;
     
-    // Construção da URL com parâmetros separados para time_range, como sugerido pelo usuário.
     const baseUrl = `https://graph.facebook.com/v19.0/${adAccountId}/insights`;
     const params = {
       level: 'ad',
@@ -78,7 +117,6 @@ function getInsightsForAccount(adAccountId, accountName) {
     };
     
     const url = baseUrl + '?' + Object.keys(params).map(key => `${key}=${encodeURIComponent(params[key])}`).join('&');
-    // --- FIM DA CORREÇÃO ---
 
     try {
       Utilities.sleep(500);
@@ -122,7 +160,7 @@ function getInsightsForAccount(adAccountId, accountName) {
     }
   }
   
-  Logger.log(`Total de ${allInsights.length} linhas de insight encontradas para a conta ${accountName} nos últimos 730 dias.`);
+  Logger.log(`Total de ${allInsights.length} linhas de insight encontradas para a conta ${accountName}.`);
   return allInsights;
 }
 
