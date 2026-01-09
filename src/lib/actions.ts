@@ -113,10 +113,7 @@ async function fetchAllDataFromSheet(): Promise<AdData[]> {
     const lines = csvText.split('\n').map(line => line.trim());
     
     let allAdsData: AdData[] = [];
-    let currentSheetName = "";
-    let headers: string[] = [];
-    let dataForCurrentSheet: any[] = [];
-
+    
     const sheetNamesAndTheirIndices: { name: string, index: number }[] = [];
     lines.forEach((line, index) => {
         // A line is likely a sheet name if it contains no commas and has non-numeric characters.
