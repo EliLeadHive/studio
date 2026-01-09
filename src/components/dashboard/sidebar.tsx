@@ -41,16 +41,9 @@ export function Sidebar() {
   return (
     <SidebarPrimitive collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader>
-        <div className="flex items-center gap-3 p-2">
-          <div className="w-8 h-8 rounded-lg bg-card flex items-center justify-center">
-            <Image src="/logo.png" alt="Sinal Logo" width={24} height={24} />
-          </div>
-          <div className="group-data-[collapsible=icon]:hidden">
-            <h1 className="font-bold text-lg leading-none text-foreground">GRUPO SINAL</h1>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Intelligence Hub
-            </span>
-          </div>
+        <div className="flex items-center justify-center p-4 h-20">
+            <Image src="/logo.png" alt="Sinal Logo" width={120} height={40} className="group-data-[collapsible=icon]:hidden"/>
+            <Image src="/logo.png" alt="Sinal Logo" width={32} height={32} className="hidden group-data-[collapsible=icon]:block"/>
         </div>
       </SidebarHeader>
       <SidebarContent>
