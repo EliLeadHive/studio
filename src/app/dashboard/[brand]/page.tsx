@@ -20,12 +20,12 @@ interface BrandPageProps {
 
 // Helper to validate brand
 const getValidBrand = (brandSlug: string): Brand | null => {
-  const brandKey = Object.keys(BRANDS).find(key => key.toLowerCase() === brandSlug.toLowerCase()) as keyof typeof BRANDS | undefined;
-  return brandKey ? BRANDS[brandKey] : null;
+  // CORREÇÃO: Usar .find() diretamente no array BRANDS
+  return BRANDS.find(brandName => brandName.toLowerCase() === brandSlug.toLowerCase()) || null;
 }
 
 export async function generateStaticParams() {
-  return Object.keys(BRANDS).map((brandKey) => ({
+  return BRANDS.map((brandKey) => ({
     brand: brandKey.toLowerCase(),
   }))
 }
@@ -121,7 +121,7 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
         <KpiCard
           title="Cliques (todos)"
           value={formatNumber(totalClicks)}
-          description={`Total de cliques em ${brand}`}
+          description={`Total de cliques (todos) em ${brand}`}
           icon={<MousePointerClick />}
           iconBgColorClass="bg-purple-500/10"
           iconColorClass="text-purple-400"
