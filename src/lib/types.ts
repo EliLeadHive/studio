@@ -1,7 +1,7 @@
 export const BRANDS = [
   "Fiat", 
   "Jeep", 
-  "Ram", 
+  // "Ram", // Removido conforme solicitado
   "Peugeot", 
   "Citroen", 
   "Nissan",

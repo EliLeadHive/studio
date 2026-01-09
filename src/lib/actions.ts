@@ -18,11 +18,10 @@ const GOOGLE_SHEET_ID = '1dEylYB_N8F51bdVosMV5rjvAPW1tNud1KvSbDeyxrZQ';
 const GOOGLE_SHEET_BASE_URL = `https://docs.google.com/spreadsheets/d/e/${GOOGLE_SHEET_ID}/pub?output=csv`;
 
 // Map Brand names from types.ts to the actual sheet names.
-// This is the source of truth for sheet names.
-const BRAND_TO_SHEET_NAME_MAP: Record<Brand, string> = {
+// This is the source of truth for sheet names based on user's script.
+const BRAND_TO_SHEET_NAME_MAP: Partial<Record<Brand, string>> = {
     "Fiat": "Fiat Sinal",
     "Jeep": "Jeep Sinal",
-    "Ram": "Jeep Sinal", // Ram data is inside Jeep Sinal sheet
     "Peugeot": "PSA", 
     "Citroen": "PSA",
     "Nissan": "Nissan Sinal Japan",
@@ -230,15 +229,22 @@ export async function uploadAdsData(formData: FormData) {
   }
 }
 
-async function fetchSheetDataForBrand(brand: Brand, sheetName: string): Promise<AdData[]> {
+async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
+    const sheetName = BRAND_TO_SHEET_NAME_MAP[brand];
+    if (!sheetName) {
+        // Silently ignore brands that don't have a sheet mapping.
+        // This prevents errors for brands like 'Ram' that were removed.
+        return [];
+    }
+
     const url = `${GOOGLE_SHEET_BASE_URL}&sheet=${encodeURIComponent(sheetName)}`;
 
     try {
         const response = await fetch(url, { next: { revalidate: 300 } }); // 5 min cache
         if (!response.ok) {
-            if (response.status === 400) {
-                 // Silently fail if sheet is not found, as it might be expected.
-                 // console.log(`Aba da planilha não encontrada para a marca: ${brand} (Aba: ${sheetName})`);
+            if (response.status === 404) { // Explicitly check for Not Found
+                 // Silently fail if sheet is not found, as it might be expected for some brands.
+                 console.log(`Aba da planilha não encontrada para a marca: ${brand} (Aba: ${sheetName})`);
             } else {
                  console.error(`Falha ao buscar dados para ${brand}: ${response.statusText}`);
             }
@@ -246,6 +252,29 @@ async function fetchSheetDataForBrand(brand: Brand, sheetName: string): Promise<
         }
         const csvText = await response.text();
         if (!csvText) return [];
+
+        // Special handling for shared sheets
+        if (sheetName === 'PSA') {
+            const psaData = parseCSV(csvText, 'PSA');
+            return psaData.filter(row => {
+                const campaignLower = (row.campaignName || '').toLowerCase();
+                if (brand === 'Peugeot') return campaignLower.includes('peugeot');
+                if (brand === 'Citroen') return campaignLower.includes('citroen');
+                // if brand is 'PSA' itself, maybe return all? or only those not peugeot/citroen?
+                // For now, only return if explicit match
+                return brand === 'PSA' && !campaignLower.includes('peugeot') && !campaignLower.includes('citroen');
+            });
+        }
+        if (sheetName === 'Omoda Jaecoo') {
+             const omodaJaecooData = parseCSV(csvText, 'Omoda'); // Parse with a default
+             return omodaJaecooData.map(row => {
+                const campaignLower = (row.campaignName || '').toLowerCase();
+                if (campaignLower.includes('jaecoo')) return {...row, brand: 'Jaecoo' as Brand};
+                // Default to Omoda for this sheet
+                return {...row, brand: 'Omoda' as Brand};
+             }).filter(row => row.brand === brand);
+        }
+
         return parseCSV(csvText, brand);
     } catch(error) {
         console.error(`Erro ao buscar ou processar dados para a marca ${brand}:`, error);
@@ -254,57 +283,12 @@ async function fetchSheetDataForBrand(brand: Brand, sheetName: string): Promise<
 }
 
 async function fetchAllSheetData(): Promise<AdData[]> {
-    const uniqueSheetNames = [...new Set(Object.values(BRAND_TO_SHEET_NAME_MAP))];
-    const brandPerSheet: Record<string, Brand[]> = {};
-
-    for (const brand of BRANDS) {
-        const sheetName = BRAND_TO_SHEET_NAME_MAP[brand];
-        if (sheetName) {
-            if (!brandPerSheet[sheetName]) {
-                brandPerSheet[sheetName] = [];
-            }
-            brandPerSheet[sheetName].push(brand);
-        }
-    }
-    
-    const fetchPromises = uniqueSheetNames.map(sheetName => {
-        // We use the first brand associated with the sheet for the initial fetch.
-        // The post-processing logic will assign the correct brand.
-        const representativeBrand = brandPerSheet[sheetName][0];
-        return fetchSheetDataForBrand(representativeBrand, sheetName);
-    });
+    const fetchPromises = BRANDS.map(brand => fetchSheetDataForBrand(brand));
     
     const results = await Promise.all(fetchPromises);
     let allData = results.flat();
 
-    // Post-processing for shared sheets like PSA, Omoda/Jaecoo, Ram/Jeep
-    const processedData = allData.map(row => {
-        const campaignLower = (row.campaignName || '').toLowerCase();
-        
-        if (row.brand === 'PSA' || row.brand === 'Peugeot' || row.brand === 'Citroen') {
-            if (campaignLower.includes('peugeot')) return {...row, brand: 'Peugeot' as Brand};
-            if (campaignLower.includes('citroen')) return {...row, brand: 'Citroen' as Brand};
-            // Default to PSA if neither is found.
-            return {...row, brand: 'PSA' as Brand};
-        }
-        
-        if (row.brand === 'Omoda' || row.brand === 'Jaecoo') {
-            if (campaignLower.includes('jaecoo')) return {...row, brand: 'Jaecoo' as Brand};
-            if (campaignLower.includes('omoda')) return {...row, brand: 'Omoda' as Brand};
-             // Default to Omoda if neither is found.
-            return {...row, brand: 'Omoda' as Brand};
-        }
-
-        if (row.brand === 'Ram' || row.brand === 'Jeep') {
-             if (campaignLower.includes('ram')) return {...row, brand: 'Ram' as Brand};
-             // Default to Jeep
-             return {...row, brand: 'Jeep' as Brand};
-        }
-
-        return row;
-    });
-
-    return processedData;
+    return allData;
 }
 
 
