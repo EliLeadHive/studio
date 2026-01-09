@@ -1,3 +1,4 @@
+
 // --- CONFIGURAÇÃO ---
 // !!! IMPORTANTE !!! Cole seu novo Access Token aqui.
 const ACCESS_TOKEN = 'SEU_NOVO_ACCESS_TOKEN'; 
@@ -155,3 +156,5 @@ function saveJsonToDrive(data) {
     Logger.log(`Erro ao salvar JSON no Drive: ${e.toString()}`);
   }
 }
+
+    
