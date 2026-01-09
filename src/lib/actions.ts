@@ -15,7 +15,7 @@ let adDataStore: AdData[] = [];
 // URL para o arquivo JSON consolidado no Google Drive, gerado pelo Apps Script.
 const CONSOLIDATED_DATA_URL = 'https://drive.google.com/uc?export=download&id=1YCs3wJ5fKxBR9pZ767D_I2np1S6ETz9O';
 
-const SHEET_NAME_TO_BRAND_MAP: Record<string, Brand | 'PSA_GROUP'> = {
+const SHEET_NAME_TO_BRAND_MAP: Record<string, Brand> = {
     "Fiat Sinal": "Fiat",
     "Jeep Sinal": "Jeep",
     "Nissan Sinal Japan": "Nissan",
@@ -31,7 +31,7 @@ const SHEET_NAME_TO_BRAND_MAP: Record<string, Brand | 'PSA_GROUP'> = {
     "Neta Sinal": "Neta",
     "Omoda Jaecoo": "OmodaJaecoo",
     "Renault Sinal France": "Renault",
-    "PSA": "PSA_GROUP", // Mapeamento especial para o grupo PSA
+    "PSA": "PSA",
 };
 
 interface FormState {
@@ -110,32 +110,17 @@ function processJsonData(jsonData: Record<string, any[]>): AdData[] {
     for (const accountName in jsonData) {
         if (Object.prototype.hasOwnProperty.call(jsonData, accountName)) {
             const records = jsonData[accountName];
-            const mappedBrand = SHEET_NAME_TO_BRAND_MAP[accountName];
+            const brandForAccount = SHEET_NAME_TO_BRAND_MAP[accountName];
             
-            if (!mappedBrand) continue;
+            if (!brandForAccount) continue;
             
-            let rowIndex = 0;
+            let rowIndex = 0; // Reset index for each account to avoid ID conflicts
 
             records.forEach(row => {
                 const dateValue = row['Reporting starts'];
                 const campaignName = row['Campaign name'];
 
                 if (!dateValue || !campaignName) return;
-
-                let brandForRecord: Brand | undefined;
-
-                if (mappedBrand === 'PSA_GROUP') {
-                    const lowerCaseCampaignName = campaignName.toLowerCase();
-                    if (lowerCaseCampaignName.includes('peugeot')) {
-                        brandForRecord = 'Peugeot';
-                    } else if (lowerCaseCampaignName.includes('citroen')) {
-                        brandForRecord = 'Citroen';
-                    }
-                } else {
-                    brandForRecord = mappedBrand as Brand;
-                }
-
-                if (!brandForRecord) return; // Pula a linha se não conseguir determinar a marca
 
                 let parsedDate: Date;
                 if (dateValue.includes('/')) {
@@ -160,9 +145,9 @@ function processJsonData(jsonData: Record<string, any[]>): AdData[] {
                 }
 
                 allAdsData.push({
-                    id: `${date}-${brandForRecord}-${rowIndex++}`,
+                    id: `${date}-${brandForAccount}-${rowIndex++}`,
                     date,
-                    brand: brandForRecord,
+                    brand: brandForAccount,
                     account: row['Account'] || 'N/A',
                     campaignName: campaignName,
                     adSetName: row['Ad set name'] || 'N/A',

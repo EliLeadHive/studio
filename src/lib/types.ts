@@ -15,8 +15,7 @@ export const BRANDS = [
   "Neta",
   "OmodaJaecoo",
   "Renault",
-  "Peugeot",
-  "Citroen"
+  "PSA"
 ] as const;
 export type Brand = (typeof BRANDS)[number];
 
