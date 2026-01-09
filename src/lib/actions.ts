@@ -106,7 +106,6 @@ export async function getAiMonthlyObservation(
 // Função para processar os dados do JSON bruto para o formato AdData[]
 function processJsonData(jsonData: Record<string, any[]>): AdData[] {
     const allAdsData: AdData[] = [];
-    let rowIndex = 0;
 
     for (const accountName in jsonData) {
         if (Object.prototype.hasOwnProperty.call(jsonData, accountName)) {
@@ -114,10 +113,16 @@ function processJsonData(jsonData: Record<string, any[]>): AdData[] {
             const currentBrand = SHEET_NAME_TO_BRAND_MAP[accountName];
             
             if (!currentBrand) continue;
+            
+            // CORREÇÃO: Reiniciar o contador de linhas para cada conta/marca para evitar IDs conflitantes.
+            let rowIndex = 0;
 
             records.forEach(row => {
                 const dateValue = row['Reporting starts'];
-                if (!dateValue) return;
+                const campaignName = row['Campaign name'];
+
+                // Garantir que a linha tenha uma data e nome de campanha para ser processada.
+                if (!dateValue || !campaignName) return;
 
                 let parsedDate: Date;
                 if (dateValue.includes('/')) {
@@ -146,7 +151,7 @@ function processJsonData(jsonData: Record<string, any[]>): AdData[] {
                     date,
                     brand: currentBrand,
                     account: row['Account'] || 'N/A',
-                    campaignName: row['Campaign name'] || 'N/A',
+                    campaignName: campaignName,
                     adSetName: row['Ad set name'] || 'N/A',
                     adName: row['Ad name'] || 'N/A',
                     investment,
