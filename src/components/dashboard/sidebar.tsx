@@ -42,13 +42,15 @@ export function Sidebar() {
     <SidebarPrimitive collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader>
         <div className="flex items-center gap-3 p-2">
-          <Image 
-            src="/logo.png"
-            alt="Logo do Cliente"
-            width={32}
-            height={32}
-            className="w-8 h-8 rounded-lg"
-          />
+          <div className="w-8 h-8 rounded-lg bg-card flex items-center justify-center">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M2 7L12 12" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 22V12" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M22 7L12 12" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M17 4.5L7 9.5" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
           <div className="group-data-[collapsible=icon]:hidden">
             <h1 className="font-bold text-lg leading-none text-foreground">GRUPO SINAL</h1>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
