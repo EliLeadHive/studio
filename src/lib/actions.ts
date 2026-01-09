@@ -102,32 +102,54 @@ async function fetchAllDataFromSheet(): Promise<AdData[]> {
 
   try {
     console.log('Fetching data from Google Sheet CSV URL...');
-    const response = await fetch(sheetUrl, { cache: 'no-store' });
+    // We add cache-busting parameters to ensure we always get the latest version.
+    const response = await fetch(`${sheetUrl}&_=${new Date().getTime()}`, { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(`Failed to fetch sheet: ${response.statusText}`);
     }
     const csvText = await response.text();
     
-    // There can be multiple tables in one CSV, separated by the sheet name.
-    // Let's find the sheet names and process them.
-    const sheets = csvText.split('\n').filter(line => line.match(/^[a-zA-Z\s]+$/) && !line.includes(',')).map(s => s.trim());
-
-    const allAdsData: AdData[] = [];
+    // The CSV is structured with sheet names appearing as single-line rows.
+    const lines = csvText.split('\n').map(line => line.trim());
     
-    const sheetDataSections = csvText.split(/^[a-zA-Z\s]+$/m).filter(s => s.trim());
+    let allAdsData: AdData[] = [];
+    let currentSheetName = "";
+    let headers: string[] = [];
+    let dataForCurrentSheet: any[] = [];
 
-    sheetDataSections.forEach((section, i) => {
-        const sheetName = sheets[i];
-        if (!sheetName || sheetName === 'Visão Geral') return;
-        
+    const sheetNamesAndTheirIndices: { name: string, index: number }[] = [];
+    lines.forEach((line, index) => {
+        // A line is likely a sheet name if it contains no commas and has non-numeric characters.
+        if (!line.includes(',') && /[a-zA-Z]/.test(line) && line.length < 50) {
+            sheetNamesAndTheirIndices.push({ name: line, index: index });
+        }
+    });
+
+    if (sheetNamesAndTheirIndices.length === 0) {
+        console.error("No sheet names found in CSV data. The format might have changed.");
+        return [];
+    }
+
+    sheetNamesAndTheirIndices.forEach(({ name: sheetName }, i) => {
+        if (sheetName === 'Visão Geral') return;
+
         const brand = SHEET_NAME_TO_BRAND_MAP[sheetName] || "GS";
         
-        const parsed = Papa.parse(section.trim(), { header: true, dynamicTyping: true });
+        const startIndex = sheetNamesAndTheirIndices[i].index + 1; // Data starts after the sheet name
+        const endIndex = (i + 1 < sheetNamesAndTheirIndices.length) ? sheetNamesAndTheirIndices[i + 1].index : lines.length;
+
+        const sheetCsvContent = lines.slice(startIndex, endIndex).join('\n');
+        
+        const parsed = Papa.parse(sheetCsvContent.trim(), { header: true, dynamicTyping: true, skipEmptyLines: true });
+
+        if (parsed.errors.length > 0) {
+             console.warn(`Parsing errors for sheet "${sheetName}":`, parsed.errors);
+        }
 
         if (Array.isArray(parsed.data)) {
             parsed.data.forEach((row: any, index: number) => {
                 const dateString = row["Reporting starts"];
-                 if (!dateString || !row["Campaign name"]) return;
+                if (!dateString || !row["Campaign name"]) return;
 
                 let date;
                 try {
@@ -175,6 +197,7 @@ async function fetchAllDataFromSheet(): Promise<AdData[]> {
         }
     });
     
+    console.log(`Finished processing. Total rows found: ${allAdsData.length}`);
     return allAdsData;
   } catch (error) {
     console.error("Error fetching or processing data from Google Sheet:", error);
@@ -182,7 +205,8 @@ async function fetchAllDataFromSheet(): Promise<AdData[]> {
   }
 }
 
-// uploadAdsData is now a placeholder as we're fetching from the sheet directly
+
+// This function is kept for compatibility but is not the main data source anymore for uploads.
 export async function uploadAdsData(formData: FormData) {
   return { success: true, rowCount: 0, message: "Data is now fetched directly from Google Sheets." };
 }
