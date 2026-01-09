@@ -13,8 +13,7 @@ export const BRANDS = [
   "Kia",
   "Leap",
   "Neta",
-  "Omoda",
-  "Jaecoo",
+  "Omoda Jaecoo",
   "Renault",
   "PSA"
 ] as const;

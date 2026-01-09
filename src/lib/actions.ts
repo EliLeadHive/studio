@@ -29,7 +29,7 @@ const SHEET_NAME_TO_BRAND_MAP: Record<string, Brand> = {
     "Kia Sinal": "Kia",
     "Leap Sinal": "Leap",
     "Neta Sinal": "Neta",
-    "Omoda Jaecoo": "Omoda", // O tratamento para Jaecoo é feito separadamente
+    "Omoda Jaecoo": "Omoda Jaecoo",
     "Renault Sinal France": "Renault",
     "PSA": "PSA",
 };
@@ -111,23 +111,11 @@ function processJsonData(jsonData: Record<string, any[]>): AdData[] {
     for (const accountName in jsonData) {
         if (Object.prototype.hasOwnProperty.call(jsonData, accountName)) {
             const records = jsonData[accountName];
-            const baseBrand = SHEET_NAME_TO_BRAND_MAP[accountName];
+            const currentBrand = SHEET_NAME_TO_BRAND_MAP[accountName];
+            
+            if (!currentBrand) continue;
 
             records.forEach(row => {
-                let currentBrand: Brand | undefined = baseBrand;
-
-                // Tratamento especial para Omoda/Jaecoo
-                if (accountName === 'Omoda Jaecoo') {
-                    const campaignLower = (row['Campaign name'] || '').toLowerCase();
-                    if (campaignLower.includes('jaecoo')) {
-                        currentBrand = 'Jaecoo';
-                    } else {
-                        currentBrand = 'Omoda';
-                    }
-                }
-                
-                if (!currentBrand) return;
-
                 const dateValue = row['Reporting starts'];
                 if (!dateValue) return;
 
