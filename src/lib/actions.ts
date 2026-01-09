@@ -22,7 +22,7 @@ const GOOGLE_SHEET_BASE_URL = `https://docs.google.com/spreadsheets/d/e/${GOOGLE
 const BRAND_TO_SHEET_NAME_MAP: Record<Brand, string> = {
     "Fiat": "Fiat Sinal",
     "Jeep": "Jeep Sinal",
-    "Ram": "Ram", // Assuming this is correct, as it was not in the image.
+    "Ram": "Jeep Sinal", // Ram data is inside Jeep Sinal sheet
     "Peugeot": "PSA", 
     "Citroen": "PSA",
     "Nissan": "Nissan Sinal Japan",
@@ -230,13 +230,7 @@ export async function uploadAdsData(formData: FormData) {
   }
 }
 
-async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
-    const sheetName = BRAND_TO_SHEET_NAME_MAP[brand];
-    if (!sheetName) {
-        console.warn(`Nenhum nome de aba mapeado para a marca: ${brand}`);
-        return [];
-    }
-    
+async function fetchSheetDataForBrand(brand: Brand, sheetName: string): Promise<AdData[]> {
     const url = `${GOOGLE_SHEET_BASE_URL}&sheet=${encodeURIComponent(sheetName)}`;
 
     try {
@@ -260,25 +254,57 @@ async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
 }
 
 async function fetchAllSheetData(): Promise<AdData[]> {
-    const fetchPromises = BRANDS.map(brand => fetchSheetDataForBrand(brand));
+    const uniqueSheetNames = [...new Set(Object.values(BRAND_TO_SHEET_NAME_MAP))];
+    const brandPerSheet: Record<string, Brand[]> = {};
+
+    for (const brand of BRANDS) {
+        const sheetName = BRAND_TO_SHEET_NAME_MAP[brand];
+        if (sheetName) {
+            if (!brandPerSheet[sheetName]) {
+                brandPerSheet[sheetName] = [];
+            }
+            brandPerSheet[sheetName].push(brand);
+        }
+    }
+    
+    const fetchPromises = uniqueSheetNames.map(sheetName => {
+        // We use the first brand associated with the sheet for the initial fetch.
+        // The post-processing logic will assign the correct brand.
+        const representativeBrand = brandPerSheet[sheetName][0];
+        return fetchSheetDataForBrand(representativeBrand, sheetName);
+    });
     
     const results = await Promise.all(fetchPromises);
     let allData = results.flat();
 
-    // Post-processing for shared sheets like PSA
-    const psaData = allData.filter(d => d.brand === 'PSA' || d.brand === 'Peugeot' || d.brand === 'Citroen');
-    const otherData = allData.filter(d => d.brand !== 'PSA' && d.brand !== 'Peugeot' && d.brand !== 'Citroen');
-    
-    const processedPsaData = psaData.map(row => {
+    // Post-processing for shared sheets like PSA, Omoda/Jaecoo, Ram/Jeep
+    const processedData = allData.map(row => {
         const campaignLower = (row.campaignName || '').toLowerCase();
-        if (campaignLower.includes('peugeot')) return {...row, brand: 'Peugeot' as Brand};
-        if (campaignLower.includes('citroen')) return {...row, brand: 'Citroen' as Brand};
-        // Default to PSA if neither is found, or keep original if it was already correct
-        if (row.brand === 'Peugeot' || row.brand === 'Citroen') return row;
-        return {...row, brand: 'PSA' as Brand};
+        
+        if (row.brand === 'PSA' || row.brand === 'Peugeot' || row.brand === 'Citroen') {
+            if (campaignLower.includes('peugeot')) return {...row, brand: 'Peugeot' as Brand};
+            if (campaignLower.includes('citroen')) return {...row, brand: 'Citroen' as Brand};
+            // Default to PSA if neither is found.
+            return {...row, brand: 'PSA' as Brand};
+        }
+        
+        if (row.brand === 'Omoda' || row.brand === 'Jaecoo') {
+            if (campaignLower.includes('jaecoo')) return {...row, brand: 'Jaecoo' as Brand};
+            if (campaignLower.includes('omoda')) return {...row, brand: 'Omoda' as Brand};
+             // Default to Omoda if neither is found.
+            return {...row, brand: 'Omoda' as Brand};
+        }
+
+        if (row.brand === 'Ram' || row.brand === 'Jeep') {
+             if (campaignLower.includes('ram')) return {...row, brand: 'Ram' as Brand};
+             // Default to Jeep
+             return {...row, brand: 'Jeep' as Brand};
+        }
+
+        return row;
     });
 
-    return [...otherData, ...processedPsaData];
+    return processedData;
 }
 
 
