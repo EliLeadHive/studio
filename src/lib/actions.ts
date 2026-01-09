@@ -172,17 +172,25 @@ export async function uploadAdsData(formData: FormData) {
 
     const fileContent = await file.text();
     const filePath = path.join(process.cwd(), 'public', 'meta_ads_data.json');
-    await fs.writeFile(filePath, fileContent);
+    
+    // Validate if the content is JSON
+    let jsonData;
+    try {
+        jsonData = JSON.parse(fileContent);
+    } catch (e) {
+        return { success: false, error: 'O arquivo não é um JSON válido.' };
+    }
 
-    const jsonData = JSON.parse(fileContent);
     const processedData = processJsonData(jsonData);
 
+    // Only write to file and update store if processing is successful
+    await fs.writeFile(filePath, JSON.stringify(jsonData, null, 2));
     adDataStore = processedData;
 
-    return { success: true, rowCount: processedData.length, usingFile: true };
+    return { success: true, rowCount: processedData.length };
   } catch (error: any) {
     console.error('Error processing uploaded file:', error);
-    return { success: false, error: error.message || 'Falha ao processar o arquivo. Certifique-se de que é um JSON válido.' };
+    return { success: false, error: error.message || 'Falha ao processar o arquivo.' };
   }
 }
 
@@ -202,12 +210,16 @@ async function fetchAllDataFromLocal(): Promise<AdData[]> {
 
 export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Date, to?: Date } = {}) {
   
-  // Sempre usa os dados do arquivo local para garantir a apresentação offline
-  let dataToUse: AdData[] = await fetchAllDataFromLocal();
-
+  let dataToUse: AdData[] = [];
+  
+  // Prioritize in-memory data from a recent upload
   if (adDataStore.length > 0) {
       console.log("Usando dados em memória de um upload recente.");
       dataToUse = adDataStore;
+  } else {
+      // Fallback to local file if no in-memory data is available
+      console.log("Nenhum dado em memória, buscando do arquivo local.");
+      dataToUse = await fetchAllDataFromLocal();
   }
   
   let filteredData = dataToUse;
