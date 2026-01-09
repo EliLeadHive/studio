@@ -17,8 +17,7 @@ let adDataStore: AdData[] = [];
 const GOOGLE_SHEET_ID = '1dEylYB_N8F51bdVosMV5rjvAPW1tNud1KvSbDeyxrZQ';
 const GOOGLE_SHEET_BASE_URL = `https://docs.google.com/spreadsheets/d/e/${GOOGLE_SHEET_ID}/pub?output=csv`;
 
-// Map Brand names from types.ts to the actual sheet names.
-const BRAND_TO_SHEET_NAME_MAP: Partial<Record<Brand, string>> = {
+const BRAND_TO_SHEET_NAME_MAP: Record<Brand, string> = {
     "Fiat": "Fiat Sinal",
     "Jeep": "Jeep Sinal",
     "Nissan": "Nissan Sinal Japan",
@@ -150,7 +149,6 @@ function parseCSV(csvText: string, brand: Brand): AdData[] {
         const dateValue = row[dateHeader];
         if(!dateValue) continue;
         
-        // Handle multiple possible date formats
         let parsedDate: Date;
         if (dateValue.includes('/')) {
              parsedDate = parse(dateValue, 'dd/MM/yyyy', new Date());
@@ -196,7 +194,6 @@ export async function uploadAdsData(formData: FormData) {
     const fileContent = await file.text();
     const parsedData = Papa.parse(fileContent, { header: true, skipEmptyLines: true });
 
-    // Assuming the uploaded file has a 'brand' column or similar identifier
     const findBrandInText = (text: string): Brand | null => {
         if (!text) return null;
         const lowerCaseText = text.toLowerCase();
@@ -207,11 +204,9 @@ export async function uploadAdsData(formData: FormData) {
     }
 
     const dataFromUpload = (parsedData.data as any[]).map((row, index) => {
-        // Try to find brand in campaign name or account name
         const brand = findBrandInText(row['Campaign name'] || row['Account name'] || row['brand']);
         if (!brand) return null;
         
-        // Use the robust parseCSV function for each row
         const rowAsCsv = Papa.unparse([row]);
         return parseCSV(rowAsCsv, brand)[0];
     }).filter(d => d !== null) as AdData[];
@@ -229,8 +224,6 @@ export async function uploadAdsData(formData: FormData) {
 async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
     const sheetName = BRAND_TO_SHEET_NAME_MAP[brand];
     if (!sheetName) {
-        // Silently ignore brands that don't have a sheet mapping.
-        // This prevents errors for brands that were removed.
         return [];
     }
 
@@ -239,7 +232,7 @@ async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
     try {
         const response = await fetch(url, { next: { revalidate: 300 } }); // 5 min cache
         if (!response.ok) {
-            if (response.status === 404) { // Explicitly check for Not Found
+            if (response.status === 404) {
                  console.warn(`Aba da planilha não encontrada para a marca: ${brand} (Aba: ${sheetName})`);
             } else {
                  console.error(`Falha ao buscar dados para ${brand}: ${response.statusText}`);
@@ -249,13 +242,11 @@ async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
         const csvText = await response.text();
         if (!csvText) return [];
 
-        // Special handling for shared sheets
         if (sheetName === 'Omoda Jaecoo') {
-             const omodaJaecooData = parseCSV(csvText, 'Omoda'); // Parse with a default
+             const omodaJaecooData = parseCSV(csvText, 'Omoda'); 
              return omodaJaecooData.map(row => {
                 const campaignLower = (row.campaignName || '').toLowerCase();
                 if (campaignLower.includes('jaecoo')) return {...row, brand: 'Jaecoo' as Brand};
-                // Default to Omoda for this sheet
                 return {...row, brand: 'Omoda' as Brand};
              }).filter(row => row.brand === brand);
         }
@@ -280,7 +271,6 @@ async function fetchAllSheetData(): Promise<AdData[]> {
 export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Date, to?: Date } = {}) {
   let dataToUse: AdData[] = [];
 
-  // Always try fetching from Google Sheets first
   const sheetData = await fetchAllSheetData();
 
   if (sheetData.length > 0) {
@@ -302,7 +292,6 @@ export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Da
     const interval = { start: startOfDay(from), end: endOfDay(to) };
     filteredData = filteredData.filter(d => {
         try {
-            // Date is already in 'yyyy-MM-dd' format
             const parsedDate = parse(d.date, 'yyyy-MM-dd', new Date());
             return isWithinInterval(parsedDate, interval);
         } catch(e) {
