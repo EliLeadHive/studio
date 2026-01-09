@@ -20,7 +20,6 @@ interface BrandPageProps {
 
 // Helper to validate brand
 const getValidBrand = (brandSlug: string): Brand | null => {
-  // CORREÇÃO: Usar .find() diretamente no array BRANDS
   return BRANDS.find(brandName => brandName.toLowerCase() === brandSlug.toLowerCase()) || null;
 }
 
@@ -75,15 +74,18 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
     }
   } satisfies ChartConfig;
 
+  // CORREÇÃO: Usar uma chave única para agrupar campanhas para evitar colisões de nomes.
   const campaignData = Object.values(brandData.reduce((acc, item) => {
     const campaignName = item.campaignName || 'Campanha sem nome';
-    if (!acc[campaignName]) {
-        acc[campaignName] = { campaignName, investment: 0, leads: 0, clicks: 0, impressions: 0 };
+    const uniqueCampaignKey = `${campaignName}-${item.adSetName}`; // Chave única
+    
+    if (!acc[uniqueCampaignKey]) {
+        acc[uniqueCampaignKey] = { campaignName, investment: 0, leads: 0, clicks: 0, impressions: 0 };
     }
-    acc[campaignName].investment += item.investment;
-    acc[campaignName].leads += item.leads;
-    acc[campaignName].clicks += item.clicks;
-    acc[campaignName].impressions += item.impressions;
+    acc[uniqueCampaignKey].investment += item.investment;
+    acc[uniqueCampaignKey].leads += item.leads;
+    acc[uniqueCampaignKey].clicks += item.clicks;
+    acc[uniqueCampaignKey].impressions += item.impressions;
     return acc;
   }, {} as Record<string, Omit<CampaignMetrics, 'cpl'>>)).map(campaign => ({
     ...campaign,
