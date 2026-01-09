@@ -196,41 +196,17 @@ export async function uploadAdsData(formData: FormData) {
 }
 
 async function fetchAllDataFromSheet(): Promise<AdData[]> {
-    const now = Date.now();
-    if (sheetDataCache.timestamp && (now - sheetDataCache.timestamp < CACHE_DURATION)) {
-      console.log('Serving from cache');
-      return sheetDataCache.data;
-    }
-
-    const SCRIPT_URL = process.env.GOOGLE_SHEET_SCRIPT_URL;
-
-    if (!SCRIPT_URL) {
-      console.error('GOOGLE_SHEET_SCRIPT_URL is not set.');
-      return [];
-    }
-    
     try {
-      console.log('Fetching data from Google Sheet...');
-      const response = await fetch(SCRIPT_URL, { next: { revalidate: 300 } }); // Revalidate every 5 minutes
-      if (!response.ok) {
-        throw new Error(`Failed to fetch from Google Apps Script: ${response.statusText}`);
-      }
-      
-      const jsonData = await response.json();
-      
+      // FOR LOCAL DEMO: Read from a local file instead of fetching from the network.
+      console.log('Fetching data from local file for demo...');
+      const filePath = path.join(process.cwd(), 'public', 'meta_ads_data.json');
+      const fileContent = await fs.readFile(filePath, 'utf-8');
+      const jsonData = JSON.parse(fileContent);
       const processedData = processJsonData(jsonData);
-
-      sheetDataCache = { data: processedData, timestamp: now };
-      
       return processedData;
 
     } catch (error) {
-        console.error("Erro ao buscar ou processar os dados do Google Apps Script:", error);
-        // Em caso de erro, tente servir o cache antigo se ele existir
-        if (sheetDataCache.data.length > 0) {
-            console.warn("Servindo cache antigo devido a um erro na busca de novos dados.");
-            return sheetDataCache.data;
-        }
+        console.error("Erro ao ler o arquivo de dados local:", error);
         return [];
     }
 }
@@ -240,13 +216,8 @@ export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Da
   
   let dataToUse: AdData[] = [];
   
-  if (adDataStore.length > 0) {
-      console.log("Usando dados em memória de um upload recente.");
-      dataToUse = adDataStore;
-  } else {
-      console.log("Nenhum dado em memória, buscando da planilha.");
-      dataToUse = await fetchAllDataFromSheet();
-  }
+  // Use local file data as the primary source for the demo.
+  dataToUse = await fetchAllDataFromSheet();
   
   let filteredData = dataToUse;
 

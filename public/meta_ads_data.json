@@ -1,89 +1,71 @@
 
 {
-  "Honda Mix": [
+  "Fiat Sinal": [
     {
       "Reporting starts": "2024-05-01",
-      "Account": "Honda Mix",
-      "Campaign name": "Honda Civic 2024",
-      "Ad set name": "Interesse em Sedans",
-      "Ad name": "Anúncio Vídeo Destaque",
-      "Amount spent (BRL)": 500.00,
-      "Leads": 25,
-      "Impressions": 50000,
-      "Clicks (all)": 1000,
-      "Cost per lead (BRL)": 20.00,
-      "CPC (all)": 0.50
+      "Campaign name": "Fiat Pulse 2024",
+      "Amount spent (BRL)": "500.50",
+      "Leads": "25",
+      "Impressions": "50000",
+      "Clicks (all)": "1200",
+      "Ad set name": "Interesse em SUVs",
+      "Ad name": "Video Ad Pulse"
     },
     {
       "Reporting starts": "2024-05-15",
-      "Account": "Honda Mix",
-      "Campaign name": "Honda HR-V",
+      "Campaign name": "Fiat Cronos Oferta",
+      "Amount spent (BRL)": "350.00",
+      "Leads": "15",
+      "Impressions": "30000",
+      "Clicks (all)": "800",
       "Ad set name": "Lookalike Compradores",
-      "Ad name": "Carrossel Oferta",
-      "Amount spent (BRL)": 750.50,
-      "Leads": 30,
-      "Impressions": 80000,
-      "Clicks (all)": 1500,
-      "Cost per lead (BRL)": 25.02,
-      "CPC (all)": 0.50
-    }
-  ],
-  "Asti Seguros": [
-    {
-      "Reporting starts": "2024-05-05",
-      "Account": "Asti Seguros",
-      "Campaign name": "Seguro Auto Maio",
-      "Ad set name": "Motoristas 30-50 anos",
-      "Ad name": "Cotação Online Grátis",
-      "Amount spent (BRL)": 1200.00,
-      "Leads": 100,
-      "Impressions": 120000,
-      "Clicks (all)": 2500,
-      "Cost per lead (BRL)": 12.00,
-      "CPC (all)": 0.48
-    }
-  ],
-  "Fiat Sinal": [
-     {
-      "Reporting starts": "2024-05-10",
-      "Account": "Fiat Sinal",
-      "Campaign name": "Fiat Toro Oferta",
-      "Ad set name": "Público Masculino 25+",
-      "Ad name": "Imagem Aventura",
-      "Amount spent (BRL)": 2500.75,
-      "Leads": 80,
-      "Impressions": 200000,
-      "Clicks (all)": 4000,
-      "Cost per lead (BRL)": 31.26,
-      "CPC (all)": 0.63
-    },
-    {
-      "Reporting starts": "2024-05-20",
-      "Account": "Fiat Sinal",
-      "Campaign name": "Pulse Abarth",
-      "Ad set name": "Entusiastas de Performance",
-      "Ad name": "Vídeo Aceleração",
-      "Amount spent (BRL)": 3000.00,
-      "Leads": 50,
-      "Impressions": 150000,
-      "Clicks (all)": 3500,
-      "Cost per lead (BRL)": 60.00,
-      "CPC (all)": 0.86
+      "Ad name": "Imagem Cronos Destaque"
     }
   ],
   "Jeep Sinal": [
     {
+      "Reporting starts": "2024-05-05",
+      "Campaign name": "Jeep Renegade Adventure",
+      "Amount spent (BRL)": "1200.75",
+      "Leads": "40",
+      "Impressions": "150000",
+      "Clicks (all)": "3500",
+      "Ad set name": "Entusiastas 4x4",
+      "Ad name": "Carrossel Renegade na Trilha"
+    },
+    {
+      "Reporting starts": "2024-05-20",
+      "Campaign name": "Jeep Compass Test-Drive",
+      "Amount spent (BRL)": "800.00",
+      "Leads": "30",
+      "Impressions": "100000",
+      "Clicks (all)": "2500",
+      "Ad set name": "Remarketing 30d",
+      "Ad name": "Compass Urbano Noturno"
+    }
+  ],
+  "Nissan Sinal Japan": [
+    {
+      "Reporting starts": "2024-05-10",
+      "Campaign name": "Nissan Kicks 2024",
+      "Amount spent (BRL)": "750.00",
+      "Leads": "35",
+      "Impressions": "90000",
+      "Clicks (all)": "2200",
+      "Ad set name": "Publico Jovem",
+      "Ad name": "Kicks Colorido Ad"
+    }
+  ],
+  "Honda Mix": [
+     {
       "Reporting starts": "2024-05-12",
-      "Account": "Jeep Sinal",
-      "Campaign name": "Jeep Renegade Test-Drive",
-      "Ad set name": "Público Feminino Aventura",
-      "Ad name": "Anúncio Estático Liberdade",
-      "Amount spent (BRL)": 4500.00,
-      "Leads": 150,
-      "Impressions": 350000,
-      "Clicks (all)": 7000,
-      "Cost per lead (BRL)": 30.00,
-      "CPC (all)": 0.64
+      "Campaign name": "Honda HR-V",
+      "Amount spent (BRL)": "950.00",
+      "Leads": "50",
+      "Impressions": "120000",
+      "Clicks (all)": "3000",
+      "Ad set name": "Familia e Segurança",
+      "Ad name": "HR-V Viagem em Familia"
     }
   ]
 }
