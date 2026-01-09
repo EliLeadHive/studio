@@ -33,12 +33,18 @@ function fetchMetaAdsData() {
   
   if (files.hasNext()) {
     const file = files.next();
-    try {
-      existingData = JSON.parse(file.getBlob().getDataAsString());
-      Logger.log(`Arquivo existente "${OUTPUT_FILENAME}" encontrado e lido.`);
-    } catch(e) {
-      Logger.log(`Arquivo existente "${OUTPUT_FILENAME}" está corrompido ou vazio. Uma carga completa será realizada.`);
-      existingData = {};
+    const fileContent = file.getBlob().getDataAsString();
+    if (fileContent && fileContent.trim() !== '{}' && fileContent.trim() !== '') {
+      try {
+        existingData = JSON.parse(fileContent);
+        Logger.log(`Arquivo existente "${OUTPUT_FILENAME}" encontrado e lido.`);
+      } catch(e) {
+        Logger.log(`Arquivo existente "${OUTPUT_FILENAME}" está corrompido. Uma carga completa será realizada.`);
+        existingData = {};
+      }
+    } else {
+       Logger.log(`Arquivo existente "${OUTPUT_FILENAME}" está vazio. Uma carga completa será realizada.`);
+       existingData = {};
     }
   } else {
     Logger.log(`Nenhum arquivo "${OUTPUT_FILENAME}" encontrado. Uma carga completa será realizada.`);
