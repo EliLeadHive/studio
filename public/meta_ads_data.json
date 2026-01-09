@@ -1,71 +1,105 @@
 
 {
-  "Fiat Sinal": [
-    {
-      "Reporting starts": "2024-05-01",
-      "Campaign name": "Fiat Pulse 2024",
-      "Amount spent (BRL)": "500.50",
-      "Leads": "25",
-      "Impressions": "50000",
-      "Clicks (all)": "1200",
-      "Ad set name": "Interesse em SUVs",
-      "Ad name": "Video Ad Pulse"
-    },
-    {
-      "Reporting starts": "2024-05-15",
-      "Campaign name": "Fiat Cronos Oferta",
-      "Amount spent (BRL)": "350.00",
-      "Leads": "15",
-      "Impressions": "30000",
-      "Clicks (all)": "800",
-      "Ad set name": "Lookalike Compradores",
-      "Ad name": "Imagem Cronos Destaque"
-    }
-  ],
-  "Jeep Sinal": [
-    {
-      "Reporting starts": "2024-05-05",
-      "Campaign name": "Jeep Renegade Adventure",
-      "Amount spent (BRL)": "1200.75",
-      "Leads": "40",
-      "Impressions": "150000",
-      "Clicks (all)": "3500",
-      "Ad set name": "Entusiastas 4x4",
-      "Ad name": "Carrossel Renegade na Trilha"
-    },
-    {
-      "Reporting starts": "2024-05-20",
-      "Campaign name": "Jeep Compass Test-Drive",
-      "Amount spent (BRL)": "800.00",
-      "Leads": "30",
-      "Impressions": "100000",
-      "Clicks (all)": "2500",
-      "Ad set name": "Remarketing 30d",
-      "Ad name": "Compass Urbano Noturno"
-    }
-  ],
-  "Nissan Sinal Japan": [
-    {
-      "Reporting starts": "2024-05-10",
-      "Campaign name": "Nissan Kicks 2024",
-      "Amount spent (BRL)": "750.00",
-      "Leads": "35",
-      "Impressions": "90000",
-      "Clicks (all)": "2200",
-      "Ad set name": "Publico Jovem",
-      "Ad name": "Kicks Colorido Ad"
-    }
-  ],
-  "Honda Mix": [
-     {
-      "Reporting starts": "2024-05-12",
-      "Campaign name": "Honda HR-V",
-      "Amount spent (BRL)": "950.00",
-      "Leads": "50",
-      "Impressions": "120000",
-      "Clicks (all)": "3000",
-      "Ad set name": "Familia e Segurança",
-      "Ad name": "HR-V Viagem em Familia"
-    }
-  ]
+    "Fiat Sinal": [
+        {
+            "Reporting starts": "2024-05-20",
+            "Campaign name": "Fiat - Vendas - Performance Max",
+            "Ad set name": "Grupo de Anúncios Varejo",
+            "Ad name": "Anúncio Dinâmico Fiat Toro",
+            "Amount spent (BRL)": "550.75",
+            "Leads": "15",
+            "Impressions": "25430",
+            "Clicks (all)": "450"
+        },
+        {
+            "Reporting starts": "2024-05-21",
+            "Campaign name": "Fiat - Vendas - Performance Max",
+            "Ad set name": "Grupo de Anúncios Varejo",
+            "Ad name": "Anúncio Dinâmico Fiat Toro",
+            "Amount spent (BRL)": "580.20",
+            "Leads": "18",
+            "Impressions": "27800",
+            "Clicks (all)": "490"
+        }
+    ],
+    "Jeep Sinal": [
+        {
+            "Reporting starts": "2024-05-20",
+            "Campaign name": "Jeep Compass - Leads",
+            "Ad set name": "Interesses Automotivos",
+            "Ad name": "Vídeo Test Drive Compass",
+            "Amount spent (BRL)": "720.50",
+            "Leads": "22",
+            "Impressions": "35100",
+            "Clicks (all)": "580"
+        },
+        {
+            "Reporting starts": "2024-05-21",
+            "Campaign name": "Jeep Compass - Leads",
+            "Ad set name": "Interesses Automotivos",
+            "Ad name": "Vídeo Test Drive Compass",
+            "Amount spent (BRL)": "750.00",
+            "Leads": "25",
+            "Impressions": "36500",
+            "Clicks (all)": "610"
+        }
+    ],
+    "Nissan Sinal Japan": [
+        {
+            "Reporting starts": "2024-05-20",
+            "Campaign name": "Nissan Kicks 2024",
+            "Ad set name": "Público Semelhante Compradores",
+            "Ad name": "Carrossel Kicks",
+            "Amount spent (BRL)": "480.00",
+            "Leads": "12",
+            "Impressions": "21000",
+            "Clicks (all)": "390"
+        }
+    ],
+    "Honda Mix": [
+        {
+            "Reporting starts": "2024-05-21",
+            "Campaign name": "Honda HR-V - Oferta",
+            "Ad set name": "Remarketing 30 dias",
+            "Ad name": "Oferta Imperdível HR-V",
+            "Amount spent (BRL)": "610.80",
+            "Leads": "20",
+            "Impressions": "29800",
+            "Clicks (all)": "510"
+        }
+    ],
+    "Asti Seguros": [
+        {
+            "Reporting starts": "2024-05-20",
+            "Campaign name": "Seguro Auto - Cotação Online",
+            "Ad set name": "Proprietários de Veículos",
+            "Ad name": "Cote seu seguro agora",
+            "Amount spent (BRL)": "300.00",
+            "Leads": "35",
+            "Impressions": "45000",
+            "Clicks (all)": "800"
+        }
+    ],
+    "Ford Mix": [],
+    "Gac Sinal": [],
+    "Geely Sinal": [],
+    "GS Institucional": [],
+    "Hyundai Sinal": [
+        {
+            "Reporting starts": "2024-05-21",
+            "Campaign name": "Hyundai Creta - Fale Conosco",
+            "Ad set name": "Região SP",
+            "Ad name": "Creta 2024",
+            "Amount spent (BRL)": "950.00",
+            "Leads": "30",
+            "Impressions": "55000",
+            "Clicks (all)": "900"
+        }
+    ],
+    "Kia Sinal": [],
+    "Leap Sinal": [],
+    "Neta Sinal": [],
+    "OmodaJaecoo": [],
+    "Renault Sinal France": [],
+    "PSA": []
 }
