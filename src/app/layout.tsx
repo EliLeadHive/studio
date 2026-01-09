@@ -3,6 +3,8 @@ import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { cn } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Sinal Intel Hub',
   description: 'Relatório de performance de anúncios do Grupo Sinal',
