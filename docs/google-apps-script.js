@@ -15,7 +15,7 @@ const AD_ACCOUNTS = [
   { name: 'GS Institucional', id: 'act_677083568024951' },
   { name: 'Hyundai Sinal', id: 'act_477621751150197' },
   { name: 'Jeep Sinal', id: 'act_145753934178360' },
-  { name 'Kia Sinal', id: 'act_697260662237200' },
+  { name: 'Kia Sinal', id: 'act_697260662237200' },
   { name: 'Leap Sinal', id: 'act_620172050851965' },
   { name: 'Neta Sinal', id: 'act_408446101855529' },
   { name: 'Nissan Sinal Japan', id: 'act_540136228006853' },
@@ -45,13 +45,14 @@ function fetchMetaAdsData() {
   }
   
   // Decide se fará a carga completa (730 dias) ou apenas a atualização (1 dia)
-  const daysToFetch = Object.keys(existingData).length > 0 ? 1 : 730;
+  const isUpdate = Object.keys(existingData).length > 0;
+  const daysToFetch = isUpdate ? 1 : 730;
   Logger.log(`Iniciando busca de dados para os últimos ${daysToFetch} dia(s).`);
 
   const newDataByBrand = {};
   for (const account of AD_ACCOUNTS) {
     Utilities.sleep(1000); 
-    const insights = getInsightsForAccount(account.id, account.name, daysToFetch);
+    const insights = getInsightsForAccount(account.id, account.name, daysToFetch, isUpdate);
     if (insights && insights.length > 0) {
       newDataByBrand[account.name] = insights;
     }
@@ -62,8 +63,8 @@ function fetchMetaAdsData() {
     return;
   }
 
-  // Se for uma atualização de 1 dia, mescla os dados
-  if (daysToFetch === 1) {
+  // Se for uma atualização, mescla os dados
+  if (isUpdate) {
     Logger.log('Mesclando dados novos com os dados existentes.');
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
@@ -91,13 +92,23 @@ function fetchMetaAdsData() {
 
 /**
  * Busca os insights de uma única conta de anúncio.
+ * @param {string} adAccountId - O ID da conta de anúncio.
+ * @param {string} accountName - O nome da conta.
+ * @param {number} daysToFetch - O número de dias para buscar.
+ * @param {boolean} isUpdate - Se a operação é uma atualização (busca D-1).
  */
-function getInsightsForAccount(adAccountId, accountName, daysToFetch) {
+function getInsightsForAccount(adAccountId, accountName, daysToFetch, isUpdate) {
   const fields = 'campaign_name,adset_name,ad_name,spend,impressions,clicks,cpc,actions,cost_per_action_type';
   const allInsights = [];
   const today = new Date();
   
-  for (let i = 0; i < daysToFetch; i++) {
+  // O loop começa em 1 se for uma atualização para pegar o dia anterior (D-1),
+  // ou em 0 se for uma carga completa.
+  const startDay = isUpdate ? 1 : 0;
+  const endDay = isUpdate ? 2 : daysToFetch;
+
+
+  for (let i = startDay; i < endDay; i++) {
     const targetDate = new Date();
     targetDate.setDate(today.getDate() - i);
     
