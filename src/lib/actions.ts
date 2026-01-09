@@ -101,7 +101,12 @@ export async function getAiMonthlyObservation(
 
 
 async function fetchAllDataFromGoogleScript(): Promise<AdData[]> {
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx_43j3cZ8k-AbpBfIe1aEr4x7W0e_rKII9sqc2Q2Lp_o-x3Qy0ocu12q_tXnSXW32s/exec";
+    const SCRIPT_URL = process.env.GOOGLE_SHEET_SCRIPT_URL;
+    
+    if (!SCRIPT_URL) {
+      console.error('GOOGLE_SHEET_SCRIPT_URL is not set.');
+      return [];
+    }
     
     try {
         console.log('Fetching data from Google Apps Script...');
