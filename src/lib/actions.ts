@@ -18,12 +18,12 @@ const GOOGLE_SHEET_ID = '1dEylYB_N8F51bdVosMV5rjvAPW1tNud1KvSbDeyxrZQ';
 const GOOGLE_SHEET_BASE_URL = `https://docs.google.com/spreadsheets/d/e/${GOOGLE_SHEET_ID}/pub?output=csv`;
 
 // Map Brand names from types.ts to the actual sheet names if they differ.
-// If a brand's sheet name is the same as its name in BRANDS, you don't need an entry.
+// This is now the source of truth for sheet names.
 const BRAND_TO_SHEET_NAME_MAP: Record<Brand, string> = {
     "Fiat": "Fiat Sinal",
     "Jeep": "Jeep Sinal",
     "Ram": "Ram",
-    "Peugeot": "PSA", // Assuming Peugeot and Citroen are under PSA
+    "Peugeot": "PSA", 
     "Citroen": "PSA",
     "Nissan": "Nissan Sinal Japan",
     "Honda": "Honda Mix",
@@ -37,7 +37,7 @@ const BRAND_TO_SHEET_NAME_MAP: Record<Brand, string> = {
     "Leap": "Leap Sinal",
     "Neta": "Neta Sinal",
     "Omoda": "Omoda Jaecoo",
-    "Jaecoo": "Omoda Jaecoo", // Assuming both are in the same sheet
+    "Jaecoo": "Omoda Jaecoo",
     "PSA": "PSA",
     "Renault": "Renault Sinal France"
 };
@@ -148,11 +148,21 @@ function parseCSV(csvText: string, brand: Brand): AdData[] {
 
     for (const [index, row] of parseResult.data.entries()) {
       try {
-        const dateHeader = mappedHeaders.date!;
+        const dateHeader = mappedHeaders.date;
+        if (!dateHeader) continue;
+
         const dateValue = row[dateHeader];
         if(!dateValue) continue;
+        
+        // Handle multiple possible date formats
+        let parsedDate: Date;
+        if (dateValue.includes('/')) {
+             parsedDate = parse(dateValue, 'dd/MM/yyyy', new Date());
+        } else {
+             parsedDate = parse(dateValue, 'yyyy-MM-dd', new Date());
+        }
 
-        const date = parse(dateValue, 'yyyy-MM-dd', new Date()).toISOString().split('T')[0];
+        const date = parsedDate.toISOString().split('T')[0];
 
         const safeParseFloat = (val: string) => parseFloat(String(val || '0').replace(',', '.'));
         const safeParseInt = (val: string) => parseInt(String(val || '0'), 10);
@@ -188,14 +198,9 @@ export async function uploadAdsData(formData: FormData) {
     if (!file) return { success: false, error: 'Nenhum arquivo enviado.' };
 
     const fileContent = await file.text();
-    // Assuming file upload contains all brands and we need to determine brand from content
-    const parsedData = Papa.parse(fileContent, { header: true });
-    const allData: AdData[] = [];
-    // A simplified logic for uploaded file - assumes a 'brand' column exists or can be derived
-    // This part might need adjustment based on the uploaded file's structure.
-    // For now, let's assume it's a flat file that needs parsing.
-    
-    // For simplicity, we'll try to find a brand in each row.
+    const parsedData = Papa.parse(fileContent, { header: true, skipEmptyLines: true });
+
+    // Assuming the uploaded file has a 'brand' column or similar identifier
     const findBrandInText = (text: string): Brand | null => {
         if (!text) return null;
         const lowerCaseText = text.toLowerCase();
@@ -205,11 +210,14 @@ export async function uploadAdsData(formData: FormData) {
         return null;
     }
 
-    // A mock parsing for uploaded file. This needs to be robust.
-    const dataFromUpload = parsedData.data.map((row: any, index) => {
-        const brand = findBrandInText(row['Campaign name'] || row['Account']);
+    const dataFromUpload = (parsedData.data as any[]).map((row, index) => {
+        // Try to find brand in campaign name or account name
+        const brand = findBrandInText(row['Campaign name'] || row['Account name'] || row['brand']);
         if (!brand) return null;
-        return parseCSV(Papa.unparse([row]), brand)[0];
+        
+        // Use the robust parseCSV function for each row
+        const rowAsCsv = Papa.unparse([row]);
+        return parseCSV(rowAsCsv, brand)[0];
     }).filter(d => d !== null) as AdData[];
 
 
@@ -228,14 +236,16 @@ async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
         console.warn(`Nenhum nome de aba mapeado para a marca: ${brand}`);
         return [];
     }
-
+    // For brands that share a sheet, we fetch it once and filter later.
+    // This avoids fetching the same sheet multiple times.
+    // The logic in fetchAllSheetData will handle this.
     const url = `${GOOGLE_SHEET_BASE_URL}&sheet=${encodeURIComponent(sheetName)}`;
 
     try {
-        const response = await fetch(url, { next: { revalidate: 300 } });
+        const response = await fetch(url, { next: { revalidate: 300 } }); // 5 min cache
         if (!response.ok) {
-            // It's common for some sheets not to exist, so we don't log it as a hard error.
-            if (response.status === 400) { // Google Sheets returns 400 for invalid sheet name
+            if (response.status === 400) {
+                 // Silently fail if sheet is not found, as it might be expected.
                  // console.log(`Aba da planilha não encontrada para a marca: ${brand} (Aba: ${sheetName})`);
             } else {
                  console.error(`Falha ao buscar dados para ${brand}: ${response.statusText}`);
@@ -252,94 +262,68 @@ async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
 }
 
 async function fetchAllSheetData(): Promise<AdData[]> {
-    const uniqueSheetNames = [...new Set(Object.values(BRAND_TO_SHEET_NAME_MAP))];
-    const sheetNameToBrandMap = new Map<string, Brand[]>();
+    // Create a map to handle sheets shared by multiple brands (like PSA)
+    const sheetFetchPromises = new Map<string, Promise<AdData[]>>();
 
-    // Create a map from sheet name to the brands it contains
     for (const brand of BRANDS) {
         const sheetName = BRAND_TO_SHEET_NAME_MAP[brand];
-        if (sheetName) {
-            if (!sheetNameToBrandMap.has(sheetName)) {
-                sheetNameToBrandMap.set(sheetName, []);
-            }
-            sheetNameToBrandMap.get(sheetName)!.push(brand);
+        if (sheetName && !sheetFetchPromises.has(sheetName)) {
+            // If we haven't started fetching this sheet yet, do it now.
+            // The parsing will assign the primary brand, we'll filter later.
+            sheetFetchPromises.set(sheetName, fetchSheetDataForBrand(brand));
         }
     }
     
-    const allPromises = uniqueSheetNames.map(async (sheetName) => {
-        const brandsInSheet = sheetNameToBrandMap.get(sheetName)!;
-        const url = `${GOOGLE_SHEET_BASE_URL}&sheet=${encodeURIComponent(sheetName)}`;
-        try {
-            const response = await fetch(url, { next: { revalidate: 300 } }); // 5 min cache
-            if (!response.ok) {
-                // console.log(`Aba da planilha não encontrada ou erro ao buscar: ${sheetName}`);
-                return [];
-            }
-            const csvText = await response.text();
-            if (!csvText) return [];
-            
-            // We parse the whole sheet, then filter for each brand it's supposed to contain.
-            // This is more efficient than re-parsing for each brand.
-            const allSheetData = parseCSV(csvText, brandsInSheet[0]); // Use first brand for logging
-            
-            // If there's only one brand for this sheet, we are done.
-            if (brandsInSheet.length === 1) {
-                return allSheetData.map(row => ({...row, brand: brandsInSheet[0]}));
-            }
+    const results = await Promise.all(sheetFetchPromises.values());
+    let allData = results.flat();
 
-            // If multiple brands share a sheet (e.g., PSA), filter the data.
-            const findBrandInText = (text: string): Brand | null => {
-                const lowerText = text.toLowerCase();
-                // Prioritize finding a more specific brand name first
-                const sortedBrands = [...brandsInSheet].sort((a,b) => b.length - a.length);
-                for(const brand of sortedBrands) {
-                    if (lowerText.includes(brand.toLowerCase())) return brand;
-                }
-                return null;
-            }
-
-            return allSheetData.map(row => {
-                const foundBrand = findBrandInText(row.campaignName) || findBrandInText(row.account) || brandsInSheet[0];
-                return {...row, brand: foundBrand};
-            });
-
-        } catch (error) {
-            console.error(`Erro ao processar a aba ${sheetName}:`, error);
-            return [];
-        }
+    // Post-processing for shared sheets like PSA
+    const psaData = allData.filter(d => d.brand === 'PSA' || d.brand === 'Peugeot' || d.brand === 'Citroen');
+    const otherData = allData.filter(d => d.brand !== 'PSA' && d.brand !== 'Peugeot' && d.brand !== 'Citroen');
+    
+    const processedPsaData = psaData.map(row => {
+        const campaignLower = row.campaignName.toLowerCase();
+        if (campaignLower.includes('peugeot')) return {...row, brand: 'Peugeot' as Brand};
+        if (campaignLower.includes('citroen')) return {...row, brand: 'Citroen' as Brand};
+        // Default to PSA if neither is found, or keep original if it was already correct
+        if (row.brand === 'Peugeot' || row.brand === 'Citroen') return row;
+        return {...row, brand: 'PSA' as Brand};
     });
 
-    const results = await Promise.all(allPromises);
-    return results.flat();
+    return [...otherData, ...processedPsaData];
 }
 
 
 export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Date, to?: Date } = {}) {
-  const allData = await fetchAllSheetData();
-  
   let dataToUse: AdData[] = [];
-  if (allData.length > 0) {
-    dataToUse = allData;
-  } else if (adDataStore.length > 0) {
-    console.log("Nenhum dado novo encontrado no Google Sheet. Usando dados em memória de um upload anterior.");
-    dataToUse = adDataStore;
-  } else {
-    console.log("Nenhuma fonte de dados (Google Sheet ou Upload) disponível.");
-  }
 
+  // Always try fetching from Google Sheets first
+  const sheetData = await fetchAllSheetData();
+
+  if (sheetData.length > 0) {
+      dataToUse = sheetData;
+  } else if (adDataStore.length > 0) {
+      console.log("Nenhum dado encontrado no Google Sheet. Usando dados em memória de um upload anterior.");
+      dataToUse = adDataStore;
+  } else {
+      console.log("Nenhuma fonte de dados (Google Sheet ou Upload) disponível. O relatório pode aparecer vazio.");
+  }
+  
   let filteredData = dataToUse;
 
   if (brand) {
-    filteredData = filteredData.filter(d => d.brand === brand);
+    filteredData = filteredData.filter(d => d.brand.toLowerCase() === brand.toLowerCase());
   }
 
   if (from && to) {
     const interval = { start: startOfDay(from), end: endOfDay(to) };
     filteredData = filteredData.filter(d => {
         try {
+            // Date is already in 'yyyy-MM-dd' format
             const parsedDate = parse(d.date, 'yyyy-MM-dd', new Date());
             return isWithinInterval(parsedDate, interval);
-        } catch {
+        } catch(e) {
+            console.error(`Data inválida encontrada: ${d.date}`, e);
             return false;
         }
     });
