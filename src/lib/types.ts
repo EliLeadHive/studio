@@ -13,9 +13,10 @@ export const BRANDS = [
   "Kia",
   "Leap",
   "Neta",
-  "OmodaJaecoo", // Corrigido para ser um identificador válido
+  "OmodaJaecoo",
   "Renault",
-  "PSA"
+  "Peugeot",
+  "Citroen"
 ] as const;
 export type Brand = (typeof BRANDS)[number];
 
