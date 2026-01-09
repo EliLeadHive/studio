@@ -60,7 +60,7 @@ export function CampaignPerformance({ campaigns }: CampaignPerformanceProps) {
                     <CampaignDetailCard label="Investimento" value={formatCurrency(campaign.investment)} />
                     <CampaignDetailCard label="Leads" value={formatNumber(campaign.leads)} />
                     <CampaignDetailCard label="CPL" value={formatCurrency(campaign.cpl)} />
-                    <CampaignDetailCard label="Cliques" value={formatNumber(campaign.clicks)} />
+                    <CampaignDetailCard label="Cliques (todos)" value={formatNumber(campaign.clicks)} />
                     <CampaignDetailCard label="Impressões" value={formatNumber(campaign.impressions)} />
                 </div>
               </AccordionContent>

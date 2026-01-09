@@ -1,3 +1,4 @@
+
 import { getAdsData } from '@/lib/actions';
 import { AdData } from '@/lib/types';
 import { formatCurrency, formatNumber } from '@/lib/utils';
@@ -42,7 +43,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
     Leads: {
       label: 'Leads',
     },
-    ...BRANDS.reduce((acc, brand) => {
+    ...Object.values(BRANDS).reduce((acc, brand) => {
       acc[brand] = {
         label: brand,
       };
@@ -78,7 +79,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
           iconColorClass="text-orange-400"
         />
         <KpiCard
-          title="Cliques"
+          title="Cliques (todos)"
           value={formatNumber(totalClicks)}
           description="Total de cliques em todos os anúncios"
           icon={<MousePointerClick />}
