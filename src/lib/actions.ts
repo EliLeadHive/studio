@@ -8,12 +8,11 @@ import type { AdData, Brand, MonthlyMetric } from "./types";
 import { BRANDS } from "./types";
 import Papa from 'papaparse';
 import { parse, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import path from 'path';
+import fs from 'fs/promises';
 
 // This is a temporary in-memory store for uploaded data.
 let adDataStore: AdData[] = [];
-
-// URL para o arquivo JSON consolidado no Google Drive, gerado pelo Apps Script.
-const CONSOLIDATED_DATA_URL = 'https://drive.google.com/uc?export=download&id=1YCs3wJ5fKxBR9pZ767D_I2np1S6ETz9O';
 
 const SHEET_NAME_TO_BRAND_MAP: Record<string, Brand> = {
     "Fiat Sinal": "Fiat",
@@ -172,7 +171,9 @@ export async function uploadAdsData(formData: FormData) {
     if (!file) return { success: false, error: 'Nenhum arquivo enviado.' };
 
     const fileContent = await file.text();
-    
+    const filePath = path.join(process.cwd(), 'public', 'meta_ads_data.json');
+    await fs.writeFile(filePath, fileContent);
+
     const jsonData = JSON.parse(fileContent);
     const processedData = processJsonData(jsonData);
 
@@ -185,38 +186,28 @@ export async function uploadAdsData(formData: FormData) {
   }
 }
 
-async function fetchAllDataFromDrive(): Promise<AdData[]> {
+async function fetchAllDataFromLocal(): Promise<AdData[]> {
     try {
-        const response = await fetch(CONSOLIDATED_DATA_URL, { 
-            next: { revalidate: 300 } // Cache de 5 minutos
-        });
-
-        if (!response.ok) {
-            throw new Error(`Falha ao buscar dados do Google Drive: ${response.statusText}`);
-        }
-
-        const jsonData = await response.json();
+        const filePath = path.join(process.cwd(), 'public', 'meta_ads_data.json');
+        const fileContent = await fs.readFile(filePath, 'utf-8');
+        const jsonData = JSON.parse(fileContent);
         return processJsonData(jsonData);
 
     } catch (error) {
-        console.error("Erro ao buscar ou processar dados do Google Drive:", error);
+        console.error("Erro ao ler ou processar o arquivo local meta_ads_data.json:", error);
         return []; // Retorna um array vazio em caso de erro para não quebrar o app
     }
 }
 
 
 export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Date, to?: Date } = {}) {
-  let dataToUse: AdData[] = [];
+  
+  // Sempre usa os dados do arquivo local para garantir a apresentação offline
+  let dataToUse: AdData[] = await fetchAllDataFromLocal();
 
-  const driveData = await fetchAllDataFromDrive();
-
-  if (driveData.length > 0) {
-      dataToUse = driveData;
-  } else if (adDataStore.length > 0) {
-      console.log("Nenhum dado encontrado no Google Drive. Usando dados em memória de um upload anterior.");
+  if (adDataStore.length > 0) {
+      console.log("Usando dados em memória de um upload recente.");
       dataToUse = adDataStore;
-  } else {
-      console.log("Nenhuma fonte de dados (Google Drive ou Upload) disponível. O relatório pode aparecer vazio.");
   }
   
   let filteredData = dataToUse;
