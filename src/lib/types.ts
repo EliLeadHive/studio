@@ -13,7 +13,7 @@ export const BRANDS = [
   "Kia",
   "Leap",
   "Neta",
-  "Omoda Jaecoo",
+  "OmodaJaecoo", // Corrigido para ser um identificador válido
   "Renault",
   "PSA"
 ] as const;

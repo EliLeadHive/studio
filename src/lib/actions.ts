@@ -29,7 +29,7 @@ const SHEET_NAME_TO_BRAND_MAP: Record<string, Brand> = {
     "Kia Sinal": "Kia",
     "Leap Sinal": "Leap",
     "Neta Sinal": "Neta",
-    "Omoda Jaecoo": "Omoda Jaecoo",
+    "Omoda Jaecoo": "OmodaJaecoo", // Corrigido para mapear para o novo identificador
     "Renault Sinal France": "Renault",
     "PSA": "PSA",
 };
