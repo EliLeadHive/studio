@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ScrollArea } from '../ui/scroll-area';
+import Image from 'next/image';
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -41,9 +42,13 @@ export function Sidebar() {
     <SidebarPrimitive collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader>
         <div className="flex items-center gap-3 p-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-lg">
-            S
-          </div>
+          <Image 
+            src="/logo.png"
+            alt="Logo do Cliente"
+            width={32}
+            height={32}
+            className="w-8 h-8 rounded-lg"
+          />
           <div className="group-data-[collapsible=icon]:hidden">
             <h1 className="font-bold text-lg leading-none text-foreground">GRUPO SINAL</h1>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
