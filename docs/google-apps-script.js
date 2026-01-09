@@ -1,7 +1,7 @@
 
 // --- CONFIGURAÇÃO ---
 // !!! IMPORTANTE !!! Cole seu novo Access Token aqui.
-const ACCESS_TOKEN = 'SEU_NOVO_ACCESS_TOKEN'; 
+const ACCESS_TOKEN = 'EAAMZCXTVsfUoBQcF22BRTgFKGDpNTCv2o89LeZAEAD9aBSBuGS1NyPT9mf2TC7TjyrX2JshrQB91WicwbhTtlFM739MUyZAaIZBJeQAYxe8O1II1E9VQSib6arNth5GVJqYZBRnIK9I8vGobrgAlWWAFmvmh7P4q55qVIuSH91Mm6UXpePBxLdBrSkQepINSv8o0ftd1Xri4ZARLzZApRdZA6EdxODamjQy5Ix5z'; 
 const OUTPUT_FILENAME = 'meta_ads_data.json'; // Nome do arquivo que será salvo no Google Drive
 
 // --- LISTA DAS SUAS CONTAS DE ANÚNCIO ---
