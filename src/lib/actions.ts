@@ -22,8 +22,6 @@ const GOOGLE_SHEET_BASE_URL = `https://docs.google.com/spreadsheets/d/e/${GOOGLE
 const BRAND_TO_SHEET_NAME_MAP: Partial<Record<Brand, string>> = {
     "Fiat": "Fiat Sinal",
     "Jeep": "Jeep Sinal",
-    "Peugeot": "PSA", 
-    "Citroen": "PSA",
     "Nissan": "Nissan Sinal Japan",
     "Honda": "Honda Mix",
     "Asti": "Asti Seguros",
@@ -37,7 +35,6 @@ const BRAND_TO_SHEET_NAME_MAP: Partial<Record<Brand, string>> = {
     "Neta": "Neta Sinal",
     "Omoda": "Omoda Jaecoo",
     "Jaecoo": "Omoda Jaecoo",
-    "PSA": "PSA",
     "Renault": "Renault Sinal France"
 };
 
@@ -233,7 +230,7 @@ async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
     const sheetName = BRAND_TO_SHEET_NAME_MAP[brand];
     if (!sheetName) {
         // Silently ignore brands that don't have a sheet mapping.
-        // This prevents errors for brands like 'Ram' that were removed.
+        // This prevents errors for brands that were removed.
         return [];
     }
 
@@ -254,17 +251,6 @@ async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
         if (!csvText) return [];
 
         // Special handling for shared sheets
-        if (sheetName === 'PSA') {
-            const psaData = parseCSV(csvText, 'PSA');
-            return psaData.filter(row => {
-                const campaignLower = (row.campaignName || '').toLowerCase();
-                if (brand === 'Peugeot') return campaignLower.includes('peugeot');
-                if (brand === 'Citroen') return campaignLower.includes('citroen');
-                // if brand is 'PSA' itself, maybe return all? or only those not peugeot/citroen?
-                // For now, only return if explicit match
-                return brand === 'PSA' && !campaignLower.includes('peugeot') && !campaignLower.includes('citroen');
-            });
-        }
         if (sheetName === 'Omoda Jaecoo') {
              const omodaJaecooData = parseCSV(csvText, 'Omoda'); // Parse with a default
              return omodaJaecooData.map(row => {

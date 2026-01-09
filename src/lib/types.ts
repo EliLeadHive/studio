@@ -1,9 +1,7 @@
+
 export const BRANDS = [
   "Fiat", 
   "Jeep", 
-  // "Ram", // Removido conforme solicitado
-  "Peugeot", 
-  "Citroen", 
   "Nissan",
   "Honda",
   "Asti",
@@ -17,7 +15,6 @@ export const BRANDS = [
   "Neta",
   "Omoda",
   "Jaecoo",
-  "PSA",
   "Renault"
 ] as const;
 export type Brand = (typeof BRANDS)[number];
