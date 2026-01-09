@@ -14,6 +14,10 @@ import fs from 'fs/promises';
 // This is a temporary in-memory store for uploaded data.
 let adDataStore: AdData[] = [];
 
+// A in-memory cache for the data fetched from Google Apps Script to avoid multiple fetches during the same request lifecycle.
+let sheetDataCache: { data: AdData[], timestamp: number | null } = { data: [], timestamp: null };
+const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
+
 const SHEET_NAME_TO_BRAND_MAP: Record<string, Brand> = {
     "Fiat Sinal": "Fiat",
     "Jeep Sinal": "Jeep",
@@ -171,7 +175,6 @@ export async function uploadAdsData(formData: FormData) {
     if (!file) return { success: false, error: 'Nenhum arquivo enviado.' };
 
     const fileContent = await file.text();
-    const filePath = path.join(process.cwd(), 'public', 'meta_ads_data.json');
     
     // Validate if the content is JSON
     let jsonData;
@@ -183,8 +186,6 @@ export async function uploadAdsData(formData: FormData) {
 
     const processedData = processJsonData(jsonData);
 
-    // Only write to file and update store if processing is successful
-    await fs.writeFile(filePath, JSON.stringify(jsonData, null, 2));
     adDataStore = processedData;
 
     return { success: true, rowCount: processedData.length };
@@ -194,16 +195,43 @@ export async function uploadAdsData(formData: FormData) {
   }
 }
 
-async function fetchAllDataFromLocal(): Promise<AdData[]> {
+async function fetchAllDataFromSheet(): Promise<AdData[]> {
+    const now = Date.now();
+    if (sheetDataCache.timestamp && (now - sheetDataCache.timestamp < CACHE_DURATION)) {
+      console.log('Serving from cache');
+      return sheetDataCache.data;
+    }
+
+    const SCRIPT_URL = process.env.GOOGLE_SHEET_SCRIPT_URL;
+
+    if (!SCRIPT_URL) {
+      console.error('GOOGLE_SHEET_SCRIPT_URL is not set.');
+      return [];
+    }
+    
     try {
-        const filePath = path.join(process.cwd(), 'public', 'meta_ads_data.json');
-        const fileContent = await fs.readFile(filePath, 'utf-8');
-        const jsonData = JSON.parse(fileContent);
-        return processJsonData(jsonData);
+      console.log('Fetching data from Google Sheet...');
+      const response = await fetch(SCRIPT_URL, { next: { revalidate: 300 } }); // Revalidate every 5 minutes
+      if (!response.ok) {
+        throw new Error(`Failed to fetch from Google Apps Script: ${response.statusText}`);
+      }
+      
+      const jsonData = await response.json();
+      
+      const processedData = processJsonData(jsonData);
+
+      sheetDataCache = { data: processedData, timestamp: now };
+      
+      return processedData;
 
     } catch (error) {
-        console.error("Erro ao ler ou processar o arquivo local meta_ads_data.json:", error);
-        return []; // Retorna um array vazio em caso de erro para não quebrar o app
+        console.error("Erro ao buscar ou processar os dados do Google Apps Script:", error);
+        // Em caso de erro, tente servir o cache antigo se ele existir
+        if (sheetDataCache.data.length > 0) {
+            console.warn("Servindo cache antigo devido a um erro na busca de novos dados.");
+            return sheetDataCache.data;
+        }
+        return [];
     }
 }
 
@@ -212,14 +240,12 @@ export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Da
   
   let dataToUse: AdData[] = [];
   
-  // Prioritize in-memory data from a recent upload
   if (adDataStore.length > 0) {
       console.log("Usando dados em memória de um upload recente.");
       dataToUse = adDataStore;
   } else {
-      // Fallback to local file if no in-memory data is available
-      console.log("Nenhum dado em memória, buscando do arquivo local.");
-      dataToUse = await fetchAllDataFromLocal();
+      console.log("Nenhum dado em memória, buscando da planilha.");
+      dataToUse = await fetchAllDataFromSheet();
   }
   
   let filteredData = dataToUse;
