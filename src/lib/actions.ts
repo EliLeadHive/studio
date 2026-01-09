@@ -6,10 +6,7 @@ import { summarizeAdsInsights } from "@/ai/flows/summarize-ads-insights";
 import { generateMonthlyObservation } from "@/ai/flows/generate-monthly-observation";
 import type { AdData, Brand, MonthlyMetric } from "./types";
 import Papa from 'papaparse';
-import { parse, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
-
-// This is a temporary in-memory store for uploaded data.
-let adDataStore: AdData[] = [];
+import { parse, isWithinInterval, startOfDay, endOfDay, isValid } from 'date-fns';
 
 const SHEET_NAME_TO_BRAND_MAP: Record<string, Brand> = {
     "Fiat Sinal": "Fiat",
@@ -99,105 +96,100 @@ export async function getAiMonthlyObservation(
   }
 }
 
+async function fetchAllDataFromSheet(): Promise<AdData[]> {
+  // Public CSV URL from Google Sheets
+  const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRh-NZm3LDmpGefyeGPsr_jzZuEmi5BDAs9fhk-HVt1Q4hMxOt0agbGJu-4ytDt2o-G0dp785KhiRN9/pub?output=csv';
 
-async function fetchAllDataFromGoogleScript(): Promise<AdData[]> {
-    const SCRIPT_URL = process.env.GOOGLE_SHEET_SCRIPT_URL;
-    
-    if (!SCRIPT_URL) {
-      console.error('GOOGLE_SHEET_SCRIPT_URL is not set.');
-      return [];
+  try {
+    console.log('Fetching data from Google Sheet CSV URL...');
+    const response = await fetch(sheetUrl, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch sheet: ${response.statusText}`);
     }
+    const csvText = await response.text();
     
-    try {
-        console.log('Fetching data from Google Apps Script...');
-        const response = await fetch(SCRIPT_URL, { cache: 'no-store' });
-        if (!response.ok) {
-            const errorBody = await response.text();
-            throw new Error(`Failed to fetch script: ${response.statusText}. Body: ${errorBody}`);
-        }
-        const jsonData = await response.json();
+    // There can be multiple tables in one CSV, separated by the sheet name.
+    // Let's find the sheet names and process them.
+    const sheets = csvText.split('\n').filter(line => line.match(/^[a-zA-Z\s]+$/) && !line.includes(',')).map(s => s.trim());
+
+    const allAdsData: AdData[] = [];
+    
+    const sheetDataSections = csvText.split(/^[a-zA-Z\s]+$/m).filter(s => s.trim());
+
+    sheetDataSections.forEach((section, i) => {
+        const sheetName = sheets[i];
+        if (!sheetName || sheetName === 'Visão Geral') return;
         
-        if (jsonData.error) {
-            throw new Error(`Error from Apps Script: ${jsonData.error}`);
-        }
+        const brand = SHEET_NAME_TO_BRAND_MAP[sheetName] || "GS";
+        
+        const parsed = Papa.parse(section.trim(), { header: true, dynamicTyping: true });
 
-        const allAdsData: AdData[] = [];
+        if (Array.isArray(parsed.data)) {
+            parsed.data.forEach((row: any, index: number) => {
+                const dateString = row["Reporting starts"];
+                 if (!dateString || !row["Campaign name"]) return;
 
-        for (const sheetName in jsonData) {
-            if (Object.prototype.hasOwnProperty.call(jsonData, sheetName)) {
-                const brand = SHEET_NAME_TO_BRAND_MAP[sheetName] || "GS"; // Fallback brand
-                const sheetData = jsonData[sheetName];
-
-                if(Array.isArray(sheetData)) {
-                    sheetData.forEach((row: any, index: number) => {
-                        const date = row["Reporting starts"];
-                        const campaignName = row["Campaign name"];
-                        
-                        if (!date || !campaignName) return;
-                        
-                        const investment = Number(row["Amount spent (BRL)"] || '0');
-                        const leads = Number(row["Leads"] || '0');
-                        const impressions = Number(row["Impressions"] || '0');
-                        const clicks = Number(row["Clicks (all)"] || '0');
-
-                        let cpl = Number(row["Cost per lead (BRL)"] || '0');
-                        if (leads > 0 && investment > 0 && isFinite(investment / leads)) {
-                            cpl = investment / leads;
-                        }
-
-                        let cpc = Number(row["CPC (all)"] || '0');
-                        if (clicks > 0 && investment > 0 && isFinite(investment / clicks)) {
-                            cpc = investment / clicks;
-                        }
-
-                        allAdsData.push({
-                            id: `${date}-${brand}-${index}`,
-                            date: date,
-                            brand: brand,
-                            account: sheetName,
-                            campaignName: campaignName,
-                            adSetName: row["Ad set name"] || 'N/A',
-                            adName: row["Ad name"] || 'N/A',
-                            investment,
-                            leads,
-                            impressions,
-                            clicks,
-                            cpl,
-                            cpc,
-                        });
-                    });
+                let date;
+                try {
+                  const parsedDate = parse(dateString, 'M/d/yyyy', new Date());
+                  if (isValid(parsedDate)) {
+                    date = parsedDate.toISOString().split('T')[0]; // format to yyyy-MM-dd
+                  } else {
+                     return;
+                  }
+                } catch(e) {
+                  return;
                 }
-            }
-        }
-        return allAdsData;
 
-    } catch (error) {
-        console.error("Erro ao buscar ou processar dados do Google Apps Script:", error);
-        return []; 
-    }
+                const investment = Number(row["Amount spent (BRL)"] || '0');
+                const leads = Number(row["Leads"] || '0');
+                const impressions = Number(row["Impressions"] || '0');
+                const clicks = Number(row["Clicks (all)"] || '0');
+
+                let cpl = Number(row["Cost per lead (BRL)"] || '0');
+                if (leads > 0 && investment > 0 && isFinite(investment / leads)) {
+                    cpl = investment / leads;
+                }
+
+                let cpc = Number(row["CPC (all)"] || '0');
+                if (clicks > 0 && investment > 0 && isFinite(investment / clicks)) {
+                    cpc = investment / clicks;
+                }
+
+                allAdsData.push({
+                    id: `${date}-${brand}-${index}`,
+                    date: date,
+                    brand: brand,
+                    account: sheetName,
+                    campaignName: row["Campaign name"],
+                    adSetName: row["Ad set name"] || 'N/A',
+                    adName: row["Ad name"] || 'N/A',
+                    investment,
+                    leads,
+                    impressions,
+                    clicks,
+                    cpl,
+                    cpc,
+                });
+            });
+        }
+    });
+    
+    return allAdsData;
+  } catch (error) {
+    console.error("Error fetching or processing data from Google Sheet:", error);
+    return [];
+  }
 }
 
-
+// uploadAdsData is now a placeholder as we're fetching from the sheet directly
 export async function uploadAdsData(formData: FormData) {
-  try {
-    const file = formData.get('file') as File;
-    if (!file) return { success: false, error: 'Nenhum arquivo enviado.' };
-
-    const fileContent = await file.text();
-    const parsed = Papa.parse<AdData>(fileContent, { header: true, dynamicTyping: true });
-
-    adDataStore = parsed.data;
-
-    return { success: true, rowCount: parsed.data.length };
-  } catch (error: any) {
-    console.error('Error processing uploaded file:', error);
-    return { success: false, error: error.message || 'Falha ao processar o arquivo.' };
-  }
+  return { success: true, rowCount: 0, message: "Data is now fetched directly from Google Sheets." };
 }
 
 export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Date, to?: Date } = {}) {
   
-  let dataToUse: AdData[] = adDataStore.length > 0 ? adDataStore : await fetchAllDataFromGoogleScript();
+  let dataToUse: AdData[] = await fetchAllDataFromSheet();
   
   let filteredData = dataToUse;
 
@@ -212,7 +204,7 @@ export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Da
             const parsedDate = parse(d.date, 'yyyy-MM-dd', new Date());
             return isWithinInterval(parsedDate, interval);
         } catch(e) {
-            console.error(`Data inválida encontrada: ${d.date}`, e);
+            console.error(`Invalid date format found: ${d.date}`, e);
             return false;
         }
     });
