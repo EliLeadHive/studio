@@ -224,6 +224,7 @@ export async function uploadAdsData(formData: FormData) {
 async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
     const sheetName = BRAND_TO_SHEET_NAME_MAP[brand];
     if (!sheetName) {
+        console.warn(`Nenhum nome de aba mapeado para a marca: ${brand}`);
         return [];
     }
 
@@ -242,16 +243,22 @@ async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
         const csvText = await response.text();
         if (!csvText) return [];
 
+        let parsedData = parseCSV(csvText, brand);
+
         if (sheetName === 'Omoda Jaecoo') {
-             const omodaJaecooData = parseCSV(csvText, 'Omoda'); 
-             return omodaJaecooData.map(row => {
+            return parsedData.map(row => {
                 const campaignLower = (row.campaignName || '').toLowerCase();
-                if (campaignLower.includes('jaecoo')) return {...row, brand: 'Jaecoo' as Brand};
+                const adSetLower = (row.adSetName || '').toLowerCase();
+                const adLower = (row.adName || '').toLowerCase();
+
+                if (campaignLower.includes('jaecoo') || adSetLower.includes('jaecoo') || adLower.includes('jaecoo')) {
+                    return {...row, brand: 'Jaecoo' as Brand};
+                }
                 return {...row, brand: 'Omoda' as Brand};
-             }).filter(row => row.brand === brand);
+            }).filter(row => row.brand === brand);
         }
 
-        return parseCSV(csvText, brand);
+        return parsedData;
     } catch(error) {
         console.error(`Erro ao buscar ou processar dados para a marca ${brand}:`, error);
         return [];
@@ -260,11 +267,8 @@ async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
 
 async function fetchAllSheetData(): Promise<AdData[]> {
     const fetchPromises = BRANDS.map(brand => fetchSheetDataForBrand(brand));
-    
     const results = await Promise.all(fetchPromises);
-    let allData = results.flat();
-
-    return allData;
+    return results.flat();
 }
 
 
