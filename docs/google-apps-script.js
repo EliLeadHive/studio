@@ -60,12 +60,12 @@ function getInsightsForAccount(adAccountId, accountName) {
     const targetDate = new Date();
     targetDate.setDate(today.getDate() - i);
     
+    // --- CORREÇÃO APLICADA AQUI ---
     const year = targetDate.getFullYear();
     const month = ('0' + (targetDate.getMonth() + 1)).slice(-2);
     const day = ('0' + targetDate.getDate()).slice(-2);
     const date_string = `${year}-${month}-${day}`;
     
-    // --- CORREÇÃO APLICADA AQUI ---
     // Construção da URL com parâmetros separados para time_range, como sugerido pelo usuário.
     const baseUrl = `https://graph.facebook.com/v19.0/${adAccountId}/insights`;
     const params = {
@@ -156,5 +156,3 @@ function saveJsonToDrive(data) {
     Logger.log(`Erro ao salvar JSON no Drive: ${e.toString()}`);
   }
 }
-
-    
