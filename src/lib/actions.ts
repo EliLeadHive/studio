@@ -1,4 +1,3 @@
-
 // src/lib/actions.ts
 'use server';
 
@@ -13,30 +12,27 @@ import { parse, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 // This is a temporary in-memory store for uploaded data.
 let adDataStore: AdData[] = [];
 
-// Base URL structure for the published Google Sheet
-const GOOGLE_SHEET_ID = '1dEylYB_N8F51bdVosMV5rjvAPW1tNud1KvSbDeyxrZQ';
-const GOOGLE_SHEET_BASE_URL = `https://docs.google.com/spreadsheets/d/e/${GOOGLE_SHEET_ID}/pub?output=csv`;
+// URL para o arquivo JSON consolidado no Google Drive, gerado pelo Apps Script.
+const CONSOLIDATED_DATA_URL = 'https://drive.google.com/uc?export=download&id=1YCs3wJ5fKxBR9pZ767D_I2np1S6ETz9O';
 
-const BRAND_TO_SHEET_NAME_MAP: Record<Brand, string> = {
-    "Fiat": "Fiat Sinal",
-    "Jeep": "Jeep Sinal",
-    "Nissan": "Nissan Sinal Japan",
-    "Honda": "Honda Mix",
-    "Asti": "Asti Seguros",
-    "Ford": "Ford Mix",
-    "Gac": "Gac Sinal",
-    "Geely": "Geely Sinal",
-    "GS": "GS Institucional",
-    "Hyundai": "Hyundai Sinal",
-    "Kia": "Kia Sinal",
-    "Leap": "Leap Sinal",
-    "Neta": "Neta Sinal",
-    "Omoda": "Omoda Jaecoo",
-    "Jaecoo": "Omoda Jaecoo",
-    "Renault": "Renault Sinal France",
+const SHEET_NAME_TO_BRAND_MAP: Record<string, Brand> = {
+    "Fiat Sinal": "Fiat",
+    "Jeep Sinal": "Jeep",
+    "Nissan Sinal Japan": "Nissan",
+    "Honda Mix": "Honda",
+    "Asti Seguros": "Asti",
+    "Ford Mix": "Ford",
+    "Gac Sinal": "Gac",
+    "Geely Sinal": "Geely",
+    "GS Institucional": "GS",
+    "Hyundai Sinal": "Hyundai",
+    "Kia Sinal": "Kia",
+    "Leap Sinal": "Leap",
+    "Neta Sinal": "Neta",
+    "Omoda Jaecoo": "Omoda", // O tratamento para Jaecoo é feito separadamente
+    "Renault Sinal France": "Renault",
     "PSA": "PSA",
 };
-
 
 interface FormState {
   message: string;
@@ -107,84 +103,77 @@ export async function getAiMonthlyObservation(
   }
 }
 
-function parseCSV(csvText: string, brand: Brand): AdData[] {
-    const cleanCsvText = csvText.trim();
-    if (!cleanCsvText) return [];
+// Função para processar os dados do JSON bruto para o formato AdData[]
+function processJsonData(jsonData: Record<string, any[]>): AdData[] {
+    const allAdsData: AdData[] = [];
+    let rowIndex = 0;
 
-    const parseResult = Papa.parse<any>(cleanCsvText, { header: true, skipEmptyLines: true, trimHeaders: true });
-    const data: AdData[] = [];
-    
-    if (parseResult.errors.length > 0) {
-        console.warn(`Erros de parsing no CSV para a marca ${brand}:`, parseResult.errors);
-    }
-    if (parseResult.data.length === 0) return [];
-    
-    const columnMapping: Record<string, string[]> = {
-        date: ['reporting starts', 'data', 'início da veiculação'],
-        account: ['account', 'lojas', 'nome da conta'],
-        campaignName: ['campaign name', 'nome da campanha'],
-        adSetName: ['ad set name', 'nome do conjunto de anúncios'],
-        adName: ['ad name', 'nome do anúncio'],
-        investment: ['amount spent (brl)', 'investimento', 'valor gasto (brl)'],
-        leads: ['leads', 'resultados', 'cadastros'],
-        impressions: ['impressions', 'impressões'],
-        clicks: ['clicks (all)', 'cliques (todos)'],
-        cpl: ['cost per lead (brl)', 'custo por lead', 'custo por resultado', 'custo por cadastro'],
-        cpc: ['cpc (all)', 'cpc (todos)', 'cpc (custo por clique no link)'],
-    };
-    
-    const originalHeaders = parseResult.meta.fields || [];
-    const mappedHeaders: Record<string, string | undefined> = {};
-    for (const key in columnMapping) {
-        const possibleHeaders = columnMapping[key];
-        const foundHeader = originalHeaders.find(origHeader => possibleHeaders.includes(origHeader.toLowerCase()));
-        if (foundHeader) mappedHeaders[key] = foundHeader;
-    }
+    for (const accountName in jsonData) {
+        if (Object.prototype.hasOwnProperty.call(jsonData, accountName)) {
+            const records = jsonData[accountName];
+            const baseBrand = SHEET_NAME_TO_BRAND_MAP[accountName];
 
-    for (const [index, row] of parseResult.data.entries()) {
-      try {
-        const dateHeader = mappedHeaders.date;
-        if (!dateHeader) continue;
+            records.forEach(row => {
+                let currentBrand: Brand | undefined = baseBrand;
 
-        const dateValue = row[dateHeader];
-        if(!dateValue) continue;
-        
-        let parsedDate: Date;
-        if (dateValue.includes('/')) {
-             parsedDate = parse(dateValue, 'dd/MM/yyyy', new Date());
-        } else {
-             parsedDate = parse(dateValue, 'yyyy-MM-dd', new Date());
+                // Tratamento especial para Omoda/Jaecoo
+                if (accountName === 'Omoda Jaecoo') {
+                    const campaignLower = (row['Campaign name'] || '').toLowerCase();
+                    if (campaignLower.includes('jaecoo')) {
+                        currentBrand = 'Jaecoo';
+                    } else {
+                        currentBrand = 'Omoda';
+                    }
+                }
+                
+                if (!currentBrand) return;
+
+                const dateValue = row['Reporting starts'];
+                if (!dateValue) return;
+
+                let parsedDate: Date;
+                if (dateValue.includes('/')) {
+                    parsedDate = parse(dateValue, 'dd/MM/yyyy', new Date());
+                } else {
+                    parsedDate = parse(dateValue, 'yyyy-MM-dd', new Date());
+                }
+                const date = parsedDate.toISOString().split('T')[0];
+                
+                const investment = parseFloat(row['Amount spent (BRL)'] || '0');
+                const leads = parseInt(row['Leads'] || '0', 10);
+                const impressions = parseInt(row['Impressions'] || '0', 10);
+                const clicks = parseInt(row['Clicks (all)'] || '0', 10);
+                let cpl = parseFloat(row['Cost per lead (BRL)'] || '0');
+                let cpc = parseFloat(row['CPC (all)'] || '0');
+
+                if (leads > 0 && investment > 0 && isFinite(investment / leads)) {
+                    cpl = investment / leads;
+                }
+                if (clicks > 0 && investment > 0 && isFinite(investment / clicks)) {
+                    cpc = investment / clicks;
+                }
+
+                allAdsData.push({
+                    id: `${date}-${currentBrand}-${rowIndex++}`,
+                    date,
+                    brand: currentBrand,
+                    account: row['Account'] || 'N/A',
+                    campaignName: row['Campaign name'] || 'N/A',
+                    adSetName: row['Ad set name'] || 'N/A',
+                    adName: row['Ad name'] || 'N/A',
+                    investment,
+                    leads,
+                    impressions,
+                    clicks,
+                    cpl,
+                    cpc,
+                });
+            });
         }
-
-        const date = parsedDate.toISOString().split('T')[0];
-
-        const safeParseFloat = (val: string) => parseFloat(String(val || '0').replace(',', '.'));
-        const safeParseInt = (val: string) => parseInt(String(val || '0'), 10);
-
-        const investment = safeParseFloat(row[mappedHeaders.investment!]);
-        const leads = safeParseInt(row[mappedHeaders.leads!]);
-        const impressions = safeParseInt(row[mappedHeaders.impressions!]);
-        const clicks = safeParseInt(row[mappedHeaders.clicks!]);
-        let cpl = safeParseFloat(row[mappedHeaders.cpl!]);
-        let cpc = safeParseFloat(row[mappedHeaders.cpc!]);
-
-        if (leads > 0 && investment > 0 && isFinite(investment / leads)) cpl = investment / leads;
-        if (clicks > 0 && investment > 0 && isFinite(investment / clicks)) cpc = investment / clicks;
-        
-        data.push({
-            id: `${date}-${brand}-${index}`, date, brand,
-            account: row[mappedHeaders.account!] || 'N/A',
-            campaignName: row[mappedHeaders.campaignName!] || 'N/A',
-            adSetName: row[mappedHeaders.adSetName!] || 'N/A',
-            adName: row[mappedHeaders.adName!] || 'N/A',
-            investment, leads, impressions, clicks, cpl, cpc,
-        });
-      } catch (e) {
-          console.error(`Falha ao processar a linha ${index + 2} do CSV para a marca ${brand}.`, { row, error: e });
-      }
     }
-    return data;
+    return allAdsData;
 }
+
 
 export async function uploadAdsData(formData: FormData) {
   try {
@@ -192,98 +181,54 @@ export async function uploadAdsData(formData: FormData) {
     if (!file) return { success: false, error: 'Nenhum arquivo enviado.' };
 
     const fileContent = await file.text();
-    const parsedData = Papa.parse(fileContent, { header: true, skipEmptyLines: true });
+    
+    // O upload manual agora espera um JSON no mesmo formato do Drive
+    const jsonData = JSON.parse(fileContent);
+    const processedData = processJsonData(jsonData);
 
-    const findBrandInText = (text: string): Brand | null => {
-        if (!text) return null;
-        const lowerCaseText = text.toLowerCase();
-        for (const b of BRANDS) {
-            if (lowerCaseText.includes(b.toLowerCase())) return b;
-        }
-        return null;
-    }
+    adDataStore = processedData;
 
-    const dataFromUpload = (parsedData.data as any[]).map((row, index) => {
-        const brand = findBrandInText(row['Campaign name'] || row['Account name'] || row['brand']);
-        if (!brand) return null;
-        
-        const rowAsCsv = Papa.unparse([row]);
-        return parseCSV(rowAsCsv, brand)[0];
-    }).filter(d => d !== null) as AdData[];
-
-
-    adDataStore = dataFromUpload;
-
-    return { success: true, rowCount: dataFromUpload.length, usingFile: true };
+    return { success: true, rowCount: processedData.length, usingFile: true };
   } catch (error: any) {
-    console.error('Error processing CSV:', error);
-    return { success: false, error: error.message || 'Falha ao processar o arquivo CSV.' };
+    console.error('Error processing uploaded file:', error);
+    return { success: false, error: error.message || 'Falha ao processar o arquivo. Certifique-se de que é um JSON válido.' };
   }
 }
 
-async function fetchSheetDataForBrand(brand: Brand): Promise<AdData[]> {
-    const sheetName = BRAND_TO_SHEET_NAME_MAP[brand];
-    if (!sheetName) {
-        console.warn(`Nenhum nome de aba mapeado para a marca: ${brand}`);
-        return [];
-    }
-
-    const url = `${GOOGLE_SHEET_BASE_URL}&sheet=${encodeURIComponent(sheetName)}`;
-
+async function fetchAllDataFromDrive(): Promise<AdData[]> {
     try {
-        const response = await fetch(url, { next: { revalidate: 300 } }); // 5 min cache
+        const response = await fetch(CONSOLIDATED_DATA_URL, { 
+            next: { revalidate: 300 } // Cache de 5 minutos
+        });
+
         if (!response.ok) {
-            if (response.status === 404) {
-                 console.warn(`Aba da planilha não encontrada para a marca: ${brand} (Aba: ${sheetName})`);
-            } else {
-                 console.error(`Falha ao buscar dados para ${brand}: ${response.statusText}`);
-            }
-            return [];
-        }
-        const csvText = await response.text();
-        if (!csvText) return [];
-
-        let parsedData = parseCSV(csvText, brand);
-
-        if (sheetName === 'Omoda Jaecoo') {
-            return parsedData.map(row => {
-                const campaignLower = (row.campaignName || '').toLowerCase();
-                const adSetLower = (row.adSetName || '').toLowerCase();
-                const adLower = (row.adName || '').toLowerCase();
-
-                if (campaignLower.includes('jaecoo') || adSetLower.includes('jaecoo') || adLower.includes('jaecoo')) {
-                    return {...row, brand: 'Jaecoo' as Brand};
-                }
-                return {...row, brand: 'Omoda' as Brand};
-            }).filter(row => row.brand === brand);
+            throw new Error(`Falha ao buscar dados do Google Drive: ${response.statusText}`);
         }
 
-        return parsedData;
-    } catch(error) {
-        console.error(`Erro ao buscar ou processar dados para a marca ${brand}:`, error);
-        return [];
+        const jsonData = await response.json();
+        return processJsonData(jsonData);
+
+    } catch (error) {
+        console.error("Erro ao buscar ou processar dados do Google Drive:", error);
+        return []; // Retorna um array vazio em caso de erro para não quebrar o app
     }
-}
-
-async function fetchAllSheetData(): Promise<AdData[]> {
-    const fetchPromises = BRANDS.map(brand => fetchSheetDataForBrand(brand));
-    const results = await Promise.all(fetchPromises);
-    return results.flat();
 }
 
 
 export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Date, to?: Date } = {}) {
   let dataToUse: AdData[] = [];
 
-  const sheetData = await fetchAllSheetData();
+  // A fonte primária de dados é sempre o Google Drive.
+  const driveData = await fetchAllDataFromDrive();
 
-  if (sheetData.length > 0) {
-      dataToUse = sheetData;
+  if (driveData.length > 0) {
+      dataToUse = driveData;
   } else if (adDataStore.length > 0) {
-      console.log("Nenhum dado encontrado no Google Sheet. Usando dados em memória de um upload anterior.");
+      // Fallback para dados de upload manual se o Drive falhar
+      console.log("Nenhum dado encontrado no Google Drive. Usando dados em memória de um upload anterior.");
       dataToUse = adDataStore;
   } else {
-      console.log("Nenhuma fonte de dados (Google Sheet ou Upload) disponível. O relatório pode aparecer vazio.");
+      console.log("Nenhuma fonte de dados (Google Drive ou Upload) disponível. O relatório pode aparecer vazio.");
   }
   
   let filteredData = dataToUse;
