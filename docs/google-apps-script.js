@@ -56,7 +56,7 @@ function getInsightsForAccount(adAccountId, accountName) {
   const allInsights = [];
   const today = new Date();
   
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 730; i++) { // ALTERADO DE 30 para 730 DIAS
     const targetDate = new Date();
     targetDate.setDate(today.getDate() - i);
     
@@ -122,7 +122,7 @@ function getInsightsForAccount(adAccountId, accountName) {
     }
   }
   
-  Logger.log(`Total de ${allInsights.length} linhas de insight encontradas para a conta ${accountName} nos últimos 30 dias.`);
+  Logger.log(`Total de ${allInsights.length} linhas de insight encontradas para a conta ${accountName} nos últimos 730 dias.`);
   return allInsights;
 }
 
