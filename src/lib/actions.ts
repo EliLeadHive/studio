@@ -96,63 +96,37 @@ export async function getAiMonthlyObservation(
   }
 }
 
-async function fetchAllDataFromSheet(): Promise<AdData[]> {
-  // Public CSV URL from Google Sheets
-  const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRh-NZm3LDmpGefyeGPsr_jzZuEmi5BDAs9fhk-HVt1Q4hMxOt0agbGJu-4ytDt2o-G0dp785KhiRN9/pub?output=csv';
+async function fetchAllDataFromDrive(): Promise<AdData[]> {
+  const driveFileUrl = 'https://drive.google.com/uc?export=download&id=1679dB5STqB1M5ZyBUCAWV9r3WqPf9iPg';
 
   try {
-    console.log('Fetching data from Google Sheet CSV URL...');
-    // We add cache-busting parameters to ensure we always get the latest version.
-    const response = await fetch(`${sheetUrl}&_=${new Date().getTime()}`, { cache: 'no-store' });
+    console.log('Fetching data from Google Drive URL...');
+    const response = await fetch(`${driveFileUrl}&_=${new Date().getTime()}`, { cache: 'no-store' });
     if (!response.ok) {
-      throw new Error(`Failed to fetch sheet: ${response.statusText}`);
+      const errorBody = await response.text();
+      throw new Error(`Failed to fetch from Drive: ${response.statusText}. Body: ${errorBody}`);
     }
-    const csvText = await response.text();
-    
-    // The CSV is structured with sheet names appearing as single-line rows.
-    const lines = csvText.split('\n').map(line => line.trim());
+    const jsonData = await response.json();
     
     let allAdsData: AdData[] = [];
     
-    const sheetNamesAndTheirIndices: { name: string, index: number }[] = [];
-    lines.forEach((line, index) => {
-        // A line is likely a sheet name if it contains no commas and has non-numeric characters.
-        if (!line.includes(',') && /[a-zA-Z]/.test(line) && line.length < 50) {
-            sheetNamesAndTheirIndices.push({ name: line, index: index });
-        }
-    });
-
-    if (sheetNamesAndTheirIndices.length === 0) {
-        console.error("No sheet names found in CSV data. The format might have changed.");
-        return [];
-    }
-
-    sheetNamesAndTheirIndices.forEach(({ name: sheetName }, i) => {
-        if (sheetName === 'Visão Geral') return;
+    for (const sheetName in jsonData) {
+        if (!jsonData.hasOwnProperty(sheetName)) continue;
 
         const brand = SHEET_NAME_TO_BRAND_MAP[sheetName] || "GS";
-        
-        const startIndex = sheetNamesAndTheirIndices[i].index + 1; // Data starts after the sheet name
-        const endIndex = (i + 1 < sheetNamesAndTheirIndices.length) ? sheetNamesAndTheirIndices[i + 1].index : lines.length;
+        const brandData = jsonData[sheetName];
 
-        const sheetCsvContent = lines.slice(startIndex, endIndex).join('\n');
-        
-        const parsed = Papa.parse(sheetCsvContent.trim(), { header: true, dynamicTyping: true, skipEmptyLines: true });
-
-        if (parsed.errors.length > 0) {
-             console.warn(`Parsing errors for sheet "${sheetName}":`, parsed.errors);
-        }
-
-        if (Array.isArray(parsed.data)) {
-            parsed.data.forEach((row: any, index: number) => {
+        if (Array.isArray(brandData)) {
+            brandData.forEach((row: any, index: number) => {
                 const dateString = row["Reporting starts"];
                 if (!dateString || !row["Campaign name"]) return;
 
                 let date;
                 try {
-                  const parsedDate = parse(dateString, 'M/d/yyyy', new Date());
+                  // The date from the script is already yyyy-MM-dd
+                  const parsedDate = parse(dateString, 'yyyy-MM-dd', new Date());
                   if (isValid(parsedDate)) {
-                    date = parsedDate.toISOString().split('T')[0]; // format to yyyy-MM-dd
+                    date = dateString;
                   } else {
                      return;
                   }
@@ -174,7 +148,7 @@ async function fetchAllDataFromSheet(): Promise<AdData[]> {
                 if (clicks > 0 && investment > 0 && isFinite(investment / clicks)) {
                     cpc = investment / clicks;
                 }
-
+                
                 allAdsData.push({
                     id: `${date}-${brand}-${index}`,
                     date: date,
@@ -192,25 +166,24 @@ async function fetchAllDataFromSheet(): Promise<AdData[]> {
                 });
             });
         }
-    });
+    }
     
-    console.log(`Finished processing. Total rows found: ${allAdsData.length}`);
+    console.log(`Finished processing from Drive. Total rows found: ${allAdsData.length}`);
     return allAdsData;
   } catch (error) {
-    console.error("Error fetching or processing data from Google Sheet:", error);
+    console.error("Error fetching or processing data from Google Drive:", error);
     return [];
   }
 }
 
-
-// This function is kept for compatibility but is not the main data source anymore for uploads.
+// Kept for compatibility but not used by getAdsData.
 export async function uploadAdsData(formData: FormData) {
-  return { success: true, rowCount: 0, message: "Data is now fetched directly from Google Sheets." };
+  return { success: true, rowCount: 0, message: "Data is now fetched directly from Google Drive." };
 }
 
 export async function getAdsData({ brand, from, to }: { brand?: Brand, from?: Date, to?: Date } = {}) {
   
-  let dataToUse: AdData[] = await fetchAllDataFromSheet();
+  let dataToUse: AdData[] = await fetchAllDataFromDrive();
   
   let filteredData = dataToUse;
 
